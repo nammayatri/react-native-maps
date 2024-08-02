@@ -77,6 +77,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
 
 public class MapView extends com.google.android.gms.maps.MapView implements GoogleMap.InfoWindowAdapter,
     GoogleMap.OnMarkerDragListener, OnMapReadyCallback, GoogleMap.OnPoiClickListener, GoogleMap.OnIndoorStateChangeListener {
@@ -138,6 +140,8 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
 
   private final ViewAttacherGroup attacherGroup;
   private LatLng tapLocation;
+
+  private Handler handler = new Handler();
 
   private static boolean contextHasBug(Context context) {
     return context == null ||
@@ -201,6 +205,13 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
           public boolean onDoubleTap(MotionEvent ev) {
             onDoublePress(ev);
             return false;
+          }
+
+          @Override
+          public boolean onDoubleTapEvent(MotionEvent e){
+            disableScrolling();
+            map.animateCamera(CameraUpdateFactory.zoomIn(), 400, null);
+            return true;
           }
         });
 
@@ -669,13 +680,13 @@ public static CameraPosition cameraPositionFromMap(ReadableMap camera){
   }
 
   public void setShowsMyLocationButton(boolean showMyLocationButton) {
-    if (hasPermissions() || !showMyLocationButton) {
+    if ((hasPermissions() || !showMyLocationButton) && map != null) {
       map.getUiSettings().setMyLocationButtonEnabled(showMyLocationButton);
     }
   }
 
   public void setToolbarEnabled(boolean toolbarEnabled) {
-    if (hasPermissions() || !toolbarEnabled) {
+    if ((hasPermissions() || !toolbarEnabled) && map != null) {
       map.getUiSettings().setMapToolbarEnabled(toolbarEnabled);
     }
   }
