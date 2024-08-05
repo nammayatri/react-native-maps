@@ -141,7 +141,6 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
   private final ViewAttacherGroup attacherGroup;
   private LatLng tapLocation;
 
-  private Handler handler = new Handler();
 
   private static boolean contextHasBug(Context context) {
     return context == null ||
@@ -209,7 +208,6 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
 
           @Override
           public boolean onDoubleTapEvent(MotionEvent e){
-            disableScrolling();
             map.animateCamera(CameraUpdateFactory.zoomIn(), 400, null);
             return true;
           }
