@@ -762,6 +762,8 @@ type State = {
 class MapView extends React.Component<MapViewProps, State> {
   static Animated: Animated.AnimatedComponent<typeof MapView>;
   private map: NativeProps['ref'];
+  private callMapReady: boolean;
+  private mapReadytimerId: ReturnType<typeof setTimeout>;
 
   constructor(props: MapViewProps) {
     super(props);
@@ -774,6 +776,16 @@ class MapView extends React.Component<MapViewProps, State> {
 
     this._onMapReady = this._onMapReady.bind(this);
     this._onChange = this._onChange.bind(this);
+    this.callMapReady = true;
+    this.mapReadytimerId = setTimeout(() => {
+      this.callMapReady = false;
+      const {onMapReady} = this.props;
+      this.setState({isReady: true}, () => {
+        if (onMapReady) {
+          onMapReady();
+        }
+      });
+    }, 100)
   }
 
   setNativeProps(props: Partial<NativeProps>) {
@@ -782,12 +794,15 @@ class MapView extends React.Component<MapViewProps, State> {
   }
 
   private _onMapReady() {
-    const {onMapReady} = this.props;
-    this.setState({isReady: true}, () => {
-      if (onMapReady) {
-        onMapReady();
-      }
-    });
+    if(this.callMapReady) {
+      clearTimeout(this.mapReadytimerId);
+      const {onMapReady} = this.props;
+      this.setState({isReady: true}, () => {
+        if (onMapReady) {
+          onMapReady();
+        }
+      });
+    }
   }
 
   private _onChange({nativeEvent}: ChangeEvent) {
@@ -1081,7 +1096,7 @@ class MapView extends React.Component<MapViewProps, State> {
   render() {
     let props: NativeProps;
 
-    // if (this.state.isReady) {
+    if (this.state.isReady) {
       props = {
         region: null,
         initialRegion: null,
@@ -1107,24 +1122,24 @@ class MapView extends React.Component<MapViewProps, State> {
       if (props.onPanDrag) {
         props.handlePanDrag = !!props.onPanDrag;
       }
-    // } else {
-    //   props = {
-    //     style: this.props.style,
-    //     region: null,
-    //     liteMode: this.props.liteMode,
-    //     googleMapId: this.props.googleMapId,
-    //     googleRenderer: this.props.googleRenderer,
-    //     initialRegion: this.props.initialRegion || null,
-    //     initialCamera: this.props.initialCamera,
-    //     ref: this.map,
-    //     onChange: this._onChange,
-    //     onMapReady: this._onMapReady,
-    //     onLayout: this.props.onLayout,
-    //     customMapStyleString: this.props.customMapStyle
-    //       ? JSON.stringify(this.props.customMapStyle)
-    //       : undefined,
-    //   };
-    // }
+    } else {
+      props = {
+        style: this.props.style,
+        region: null,
+        liteMode: this.props.liteMode,
+        googleMapId: this.props.googleMapId,
+        googleRenderer: this.props.googleRenderer,
+        initialRegion: this.props.initialRegion || null,
+        initialCamera: this.props.initialCamera,
+        ref: this.map,
+        onChange: this._onChange,
+        onMapReady: this._onMapReady,
+        onLayout: this.props.onLayout,
+        customMapStyleString: this.props.customMapStyle
+          ? JSON.stringify(this.props.customMapStyle)
+          : undefined,
+      };
+    }
 
     const AIRMap = getNativeMapComponent(this.props.provider);
 
