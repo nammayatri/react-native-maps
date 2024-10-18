@@ -1086,7 +1086,7 @@ public static CameraPosition cameraPositionFromMap(ReadableMap camera){
   }
 
   public void fitToCoordinates(ReadableArray coordinatesArray, ReadableMap edgePadding,
-      boolean animated) {
+      boolean animated,int duration) {
     if (map == null) return;
 
     LatLngBounds.Builder builder = new LatLngBounds.Builder();
@@ -1106,7 +1106,7 @@ public static CameraPosition cameraPositionFromMap(ReadableMap camera){
     }
 
     if (animated) {
-      map.animateCamera(cu);
+        map.animateCamera(cu,duration,null);
     } else {
       map.moveCamera(cu);
     }
