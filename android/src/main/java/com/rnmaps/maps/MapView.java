@@ -639,7 +639,7 @@ public static CameraPosition cameraPositionFromMap(ReadableMap camera){
 
   public void setShowsUserLocation(boolean showUserLocation) {
     this.showUserLocation = showUserLocation; // hold onto this for lifecycle handling
-    if (hasPermissions()) {
+    if (map != null && hasPermissions()) {
       map.setLocationSource(fusedLocationSource);
       //noinspection MissingPermission
       map.setMyLocationEnabled(showUserLocation);
@@ -1003,6 +1003,7 @@ public static CameraPosition cameraPositionFromMap(ReadableMap camera){
   int baseBottomMapPadding;
 
   public void applyBaseMapPadding(int left, int top, int right, int bottom){
+    if(this.map == null) return;
     this.map.setPadding(left, top, right, bottom);
     baseLeftMapPadding = left;
     baseRightMapPadding = right;
@@ -1040,6 +1041,7 @@ public static CameraPosition cameraPositionFromMap(ReadableMap camera){
   }
 
   private void appendMapPadding(int iLeft,int iTop, int iRight, int iBottom) {
+    if (map == null) return;
     int left;
     int top;
     int right;
