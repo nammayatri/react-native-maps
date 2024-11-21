@@ -602,7 +602,7 @@ public static CameraPosition cameraPositionFromMap(ReadableMap camera){
   CameraPosition.Builder builder = new CameraPosition.Builder();
 
   ReadableMap center = camera.getMap("center");
-  if (center != null) {
+  if (center != null && center.hasKey("longitude") && center.hasKey("latitude")) {
     double lng = center.getDouble("longitude");
     double lat = center.getDouble("latitude");
     builder.target(new LatLng(lat, lng));
