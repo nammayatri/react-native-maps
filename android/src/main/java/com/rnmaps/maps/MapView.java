@@ -598,21 +598,22 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
   }
 public static CameraPosition cameraPositionFromMap(ReadableMap camera){
   if (camera == null) return null;
+  try{
+    CameraPosition.Builder builder = new CameraPosition.Builder();
+    ReadableMap center = camera.getMap("center");
+    if (center != null) {
+      double lng = center.getDouble("longitude");
+      double lat = center.getDouble("latitude");
+      builder.target(new LatLng(lat, lng));
+    }
 
-  CameraPosition.Builder builder = new CameraPosition.Builder();
-
-  ReadableMap center = camera.getMap("center");
-  if (center != null && center.hasKey("longitude") && center.hasKey("latitude")) {
-    double lng = center.getDouble("longitude");
-    double lat = center.getDouble("latitude");
-    builder.target(new LatLng(lat, lng));
+    builder.tilt((float)camera.getDouble("pitch"));
+    builder.bearing((float)camera.getDouble("heading"));
+    builder.zoom((float)camera.getDouble("zoom"));
+    return builder.build();
+  }catch (Exception e ){
+    return null;
   }
-
-  builder.tilt((float)camera.getDouble("pitch"));
-  builder.bearing((float)camera.getDouble("heading"));
-  builder.zoom((float)camera.getDouble("zoom"));
-
-  return builder.build();
 }
   public void moveToCamera(ReadableMap cameraMap) {
     CameraPosition camera = cameraPositionFromMap(cameraMap);
