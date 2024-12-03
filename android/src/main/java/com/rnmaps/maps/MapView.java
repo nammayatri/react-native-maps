@@ -1316,6 +1316,7 @@ public static CameraPosition cameraPositionFromMap(ReadableMap camera){
   }
 
   public void onPanDrag(MotionEvent ev) {
+    if (this.map == null) return;
     Point point = new Point((int) ev.getX(), (int) ev.getY());
     LatLng coords = this.map.getProjection().fromScreenLocation(point);
     WritableMap event = makeClickEventData(coords);

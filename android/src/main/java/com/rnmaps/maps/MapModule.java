@@ -215,6 +215,7 @@ public class MapModule extends ReactContextBaseJavaModule {
     );
 
     MapUIBlock uiBlock = new MapUIBlock(tag, promise, context, view -> {
+        if(view == null || view.map == null) return null;
         Point pt = view.map.getProjection().toScreenLocation(coord);
 
         WritableMap ptJson = new WritableNativeMap();
@@ -240,6 +241,7 @@ public class MapModule extends ReactContextBaseJavaModule {
     );
 
     MapUIBlock uiBlock = new MapUIBlock(tag, promise, context, view -> {
+        if(view == null || view.map == null) return null;
         LatLng coord = view.map.getProjection().fromScreenLocation(pt);
 
         WritableMap coordJson = new WritableNativeMap();
