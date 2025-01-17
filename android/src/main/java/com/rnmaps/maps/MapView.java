@@ -206,8 +206,11 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
 
           @Override
           public boolean onDoubleTapEvent(MotionEvent e){
-            map.animateCamera(CameraUpdateFactory.zoomIn(), 400, null);
-            return true;
+            if(map != null){
+              map.animateCamera(CameraUpdateFactory.zoomIn(), 400, null);
+              return true;
+            }
+            return false;
           }
         });
 
