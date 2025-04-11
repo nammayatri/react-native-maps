@@ -250,6 +250,7 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
       return;
     }
     this.map = map;
+    this.map.getUiSettings().setMyLocationButtonEnabled(false);
 
     markerManager = new MarkerManager(map);
     markerCollection = markerManager.newCollection();

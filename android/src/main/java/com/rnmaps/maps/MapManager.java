@@ -218,7 +218,7 @@ public class MapManager extends ViewGroupManager<MapView> {
         view.setUserLocationFastestInterval(fastestInterval);
     }
 
-    @ReactProp(name = "showsMyLocationButton", defaultBoolean = true)
+    @ReactProp(name = "showsMyLocationButton", defaultBoolean = false)
     public void setShowsMyLocationButton(MapView view, boolean showMyLocationButton) {
         view.setShowsMyLocationButton(showMyLocationButton);
     }
