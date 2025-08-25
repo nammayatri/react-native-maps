@@ -5,6 +5,7 @@ import static androidx.core.content.PermissionChecker.checkSelfPermission;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Point;
 import android.location.Location;
@@ -139,6 +140,8 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
   private final ViewAttacherGroup attacherGroup;
   private LatLng tapLocation;
 
+  // Native nearby markers management
+  private final Map<String, Marker> nearbyMarkersCache = new HashMap<>();
 
   private static boolean contextHasBug(Context context) {
     return context == null ||
@@ -1530,4 +1533,177 @@ public static CameraPosition cameraPositionFromMap(ReadableMap camera){
       layout(getLeft(), getTop(), getRight(), getBottom());
     }
   };
+
+  // Native nearby markers management
+  public void updateNearbyMarkersFromProcessedData(org.json.JSONArray processedMarkers) {
+      
+      if (map == null) {
+          return;
+      }
+      
+      try {
+          
+          java.util.Set<String> seenDrivers = new java.util.HashSet<>();
+          
+          // Process each marker with its corresponding React view
+          for (int i = 0; i < processedMarkers.length(); i++) {
+              org.json.JSONObject markerData = processedMarkers.getJSONObject(i);
+              
+              String driverId = markerData.getString("id");
+              double lat = markerData.getDouble("latitude");
+              double lon = markerData.getDouble("longitude");
+              double rotation = markerData.optDouble("rotation", -1);
+              int zIndex = markerData.optInt("zIndex", 0);
+              String vehicleVariant = markerData.optString("vehicleVariant", "auto");
+              
+              seenDrivers.add(driverId);
+              
+              Marker existingMarker = nearbyMarkersCache.get(driverId);
+              
+              if (existingMarker != null) {
+                  // Update existing marker
+                  existingMarker.setPosition(new com.google.android.gms.maps.model.LatLng(lat, lon));
+                  existingMarker.setZIndex(zIndex);
+                  
+                  // Update icon if vehicle variant changed
+                  existingMarker.setIcon(getIconFromAssets(vehicleVariant, rotation));
+                  
+              } else {
+                  // Create new marker with custom view
+                  com.google.android.gms.maps.model.MarkerOptions markerOptions = new com.google.android.gms.maps.model.MarkerOptions()
+                      .position(new com.google.android.gms.maps.model.LatLng(lat, lon))
+                      .anchor(0.5f, 0.5f)
+                      .zIndex(zIndex)
+                      .flat(true)
+                      .visible(true);
+                  
+                  
+                  // Use custom marker icon based on vehicle variant and rotation
+                  markerOptions.icon(getIconFromAssets(vehicleVariant, rotation));
+                  
+                  Marker newMarker = map.addMarker(markerOptions);
+                  if (newMarker != null) {
+                      nearbyMarkersCache.put(driverId, newMarker);
+                  }
+              }
+          }
+          
+          // Remove stale markers
+          java.util.Iterator<java.util.Map.Entry<String, Marker>> iterator = nearbyMarkersCache.entrySet().iterator();
+          while (iterator.hasNext()) {
+              java.util.Map.Entry<String, Marker> entry = iterator.next();
+              String driverId = entry.getKey();
+              if (!seenDrivers.contains(driverId)) {
+                  Marker marker = entry.getValue();
+                  marker.remove();
+                  iterator.remove();
+              }
+          }
+          
+          
+      } catch (Exception e) {
+          Log.e("RNMaps_NearbyMarkers", "Error in updateNearbyMarkersFromProcessedData: " + e.getMessage(), e);
+      }
+  }
+
+  // Get icon from assets with size reduction
+  private com.google.android.gms.maps.model.BitmapDescriptor getIconFromAssets(String vehicleVariant, double rotation) {
+      try {
+          // Transform vehicle variant to lowercase
+          String normalizedVariant = vehicleVariant.toLowerCase();
+          
+          // Get the nearest rotation angle
+          int nearestRotation = getNearestRotationAngle(rotation);
+          
+          // Build asset name with lowercase variant (e.g., "mt_ic_auto_90", "mt_ic_bike_30")
+          String assetName = "mt_ic_" + normalizedVariant + "_" + nearestRotation;
+          
+          
+          // Get resource ID using getIdentifier
+          int resourceId = getResources().getIdentifier(assetName, "drawable", getContext().getPackageName());
+          
+          if (resourceId != 0) {
+              // Resource found, create scaled bitmap
+              return createScaledBitmapDescriptor(resourceId);
+          } else {
+              // Resource not found, fallback to default
+              return com.google.android.gms.maps.model.BitmapDescriptorFactory.defaultMarker(
+                  com.google.android.gms.maps.model.BitmapDescriptorFactory.HUE_BLUE
+              );
+          }
+          
+      } catch (Exception e) {
+          Log.e("RNMaps_NearbyMarkers", "Error getting icon: " + e.getMessage());
+          return com.google.android.gms.maps.model.BitmapDescriptorFactory.defaultMarker(
+              com.google.android.gms.maps.model.BitmapDescriptorFactory.HUE_BLUE
+          );
+      }
+  }
+
+  // Create scaled bitmap descriptor for smaller marker size
+  private com.google.android.gms.maps.model.BitmapDescriptor createScaledBitmapDescriptor(int resourceId) {
+      try {
+          // Load the original bitmap
+          BitmapFactory.Options options = new BitmapFactory.Options();
+          options.inScaled = false; // Disable automatic scaling based on resource density
+          android.graphics.Bitmap originalBitmap = android.graphics.BitmapFactory.decodeResource(getResources(), resourceId,options);
+          
+          if (originalBitmap != null) {
+
+            int targetWidthDp = 60; // only width in dp
+            float density = getResources().getDisplayMetrics().density;
+
+            int widthPx = (int) (targetWidthDp * density);
+            float aspectRatio = (float) originalBitmap.getHeight() / originalBitmap.getWidth();
+            int heightPx = (int) (widthPx * aspectRatio);
+
+            Bitmap scaledBitmap = Bitmap.createScaledBitmap(originalBitmap, widthPx, heightPx, true);
+              
+              // Recycle original bitmap to free memory
+              originalBitmap.recycle();
+              
+              // Create bitmap descriptor from scaled bitmap
+              return com.google.android.gms.maps.model.BitmapDescriptorFactory.fromBitmap(scaledBitmap);
+              
+          } else {
+              // Fallback to default if bitmap loading fails
+              return com.google.android.gms.maps.model.BitmapDescriptorFactory.defaultMarker(
+                  com.google.android.gms.maps.model.BitmapDescriptorFactory.HUE_BLUE
+              );
+          }
+          
+      } catch (Exception e) {
+          Log.e("RNMaps_NearbyMarkers", "Error creating scaled bitmap: " + e.getMessage());
+          return com.google.android.gms.maps.model.BitmapDescriptorFactory.defaultMarker(
+              com.google.android.gms.maps.model.BitmapDescriptorFactory.HUE_BLUE
+          );
+      }
+  }
+
+  // Get the nearest rotation angle
+  private int getNearestRotationAngle(double angle) {
+      if (angle == -1) return 90;
+      
+      double normalizedAngle = ((angle % 360) + 360) % 360;
+      int[] availableAngles = {0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330};
+      
+      int closestAngle = availableAngles[0];
+      double minDifference = 360;
+      
+      for (int availableAngle : availableAngles) {
+          double difference = Math.min(
+              Math.abs(normalizedAngle - availableAngle),
+              360 - Math.abs(normalizedAngle - availableAngle)
+          );
+          
+          if (difference < minDifference) {
+              minDifference = difference;
+              closestAngle = availableAngle;
+          }
+      }
+      
+      return closestAngle;
+  }
+
+
 }
