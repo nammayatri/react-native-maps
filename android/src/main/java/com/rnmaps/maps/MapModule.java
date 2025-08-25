@@ -8,6 +8,7 @@ import android.location.Geocoder;
 import android.net.Uri;
 import android.util.Base64;
 import android.util.DisplayMetrics;
+import android.util.Log;
 
 import androidx.annotation.Nullable;
 
@@ -59,6 +60,41 @@ public class MapModule extends ReactContextBaseJavaModule {
 
   public Activity getActivity() {
     return getCurrentActivity();
+  }
+
+  // Helper method to find MapView in the current activity
+  private MapView findMapViewInActivity() {
+    Activity activity = getCurrentActivity();
+    if (activity == null) {
+      return null;
+    }
+
+    // Recursively search for MapView in the activity's view hierarchy
+    android.view.View rootView = activity.findViewById(android.R.id.content);
+    if (rootView != null) {
+      return findMapViewRecursive(rootView);
+    }
+    
+    return null;
+  }
+
+  // Recursive helper to find MapView in view hierarchy
+  private MapView findMapViewRecursive(android.view.View view) {
+    if (view instanceof MapView) {
+      return (MapView) view;
+    }
+
+    if (view instanceof android.view.ViewGroup) {
+      android.view.ViewGroup viewGroup = (android.view.ViewGroup) view;
+      for (int i = 0; i < viewGroup.getChildCount(); i++) {
+        MapView result = findMapViewRecursive(viewGroup.getChildAt(i));
+        if (result != null) {
+          return result;
+        }
+      }
+    }
+
+    return null;
   }
 
   public static void closeQuietly(Closeable closeable) {
@@ -282,4 +318,37 @@ public class MapModule extends ReactContextBaseJavaModule {
 
     uiBlock.addToUIManager();
   }
+
+  @ReactMethod
+  public void updateNearbyMarkersNative(final String markersJson, final Promise promise) {
+    
+    final ReactApplicationContext context = getReactApplicationContext();
+
+    // Find the first available MapView in the current activity
+    new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+        try {
+            
+            MapView mapView = findMapViewInActivity();
+            if (mapView != null) {
+                
+                // Parse processed markers JSON
+                org.json.JSONArray markers = new org.json.JSONArray(markersJson);
+                
+                // Call the method to update markers directly on the MapView
+                mapView.updateNearbyMarkersFromProcessedData(markers);
+                
+                promise.resolve(null);
+                
+            } else {
+                promise.reject("NO_MAPVIEW_FOUND", "Could not find MapView in current activity");
+            }
+            
+        } catch (Exception e) {
+            Log.e("RNMaps_NearbyMarkers", "Error in updateNearbyMarkersNative: " + e.getMessage(), e);
+            promise.reject("NATIVE_MARKER_UPDATE_ERROR", e.getMessage(), e);
+        }
+    });
+  }
+
+
 }
