@@ -9,6 +9,9 @@ import android.net.Uri;
 import android.util.Base64;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.View;
+import android.os.Handler;
+import android.os.Looper;
 
 import androidx.annotation.Nullable;
 
@@ -20,6 +23,7 @@ import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeMap;
 import com.facebook.react.module.annotations.ReactModule;
+import com.facebook.react.uimanager.UIManagerModule;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
@@ -32,6 +36,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.json.JSONArray;
 
 @ReactModule(name = MapModule.NAME)
 public class MapModule extends ReactContextBaseJavaModule {
@@ -62,40 +68,6 @@ public class MapModule extends ReactContextBaseJavaModule {
     return getCurrentActivity();
   }
 
-  // Helper method to find MapView in the current activity
-  private MapView findMapViewInActivity() {
-    Activity activity = getCurrentActivity();
-    if (activity == null) {
-      return null;
-    }
-
-    // Recursively search for MapView in the activity's view hierarchy
-    android.view.View rootView = activity.findViewById(android.R.id.content);
-    if (rootView != null) {
-      return findMapViewRecursive(rootView);
-    }
-    
-    return null;
-  }
-
-  // Recursive helper to find MapView in view hierarchy
-  private MapView findMapViewRecursive(android.view.View view) {
-    if (view instanceof MapView) {
-      return (MapView) view;
-    }
-
-    if (view instanceof android.view.ViewGroup) {
-      android.view.ViewGroup viewGroup = (android.view.ViewGroup) view;
-      for (int i = 0; i < viewGroup.getChildCount(); i++) {
-        MapView result = findMapViewRecursive(viewGroup.getChildAt(i));
-        if (result != null) {
-          return result;
-        }
-      }
-    }
-
-    return null;
-  }
 
   public static void closeQuietly(Closeable closeable) {
     if (closeable == null) return;
@@ -320,27 +292,36 @@ public class MapModule extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public void updateNearbyMarkersNative(final String markersJson, final Promise promise) {
+  public void updateNearbyMarkersNative(final int nativeTag, final String markersJson, final Promise promise) {
     
     final ReactApplicationContext context = getReactApplicationContext();
 
-    // Find the first available MapView in the current activity
-    new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+
+    new Handler(Looper.getMainLooper()).post(() -> {
         try {
+            // Get the React Native view manager
+            UIManagerModule uiManager = getReactApplicationContext()
+                .getNativeModule(com.facebook.react.uimanager.UIManagerModule.class);
             
-            MapView mapView = findMapViewInActivity();
-            if (mapView != null) {
-                
-                // Parse processed markers JSON
-                org.json.JSONArray markers = new org.json.JSONArray(markersJson);
-                
-                // Call the method to update markers directly on the MapView
-                mapView.updateNearbyMarkersFromProcessedData(markers);
-                
-                promise.resolve(null);
-                
+            if (uiManager != null) {
+                // Get the view from the ref
+                View view = uiManager.resolveView(nativeTag);
+                if (view instanceof MapView) {
+                    MapView mapView = (MapView) view;
+                    
+                    // Parse processed markers JSON
+                    JSONArray markers = new JSONArray(markersJson);
+                    
+                    // Call the method to update markers directly on the MapView
+                    mapView.updateNearbyMarkersFromProcessedData(markers);
+                    
+                    promise.resolve(null);
+                    
+                } else {
+                    promise.reject("NO_MAPVIEW_FOUND", "Could not find MapView for nativeTag: " + nativeTag);
+                }
             } else {
-                promise.reject("NO_MAPVIEW_FOUND", "Could not find MapView in current activity");
+                promise.reject("NO_UIMANAGER", "UIManagerModule not found");
             }
             
         } catch (Exception e) {
