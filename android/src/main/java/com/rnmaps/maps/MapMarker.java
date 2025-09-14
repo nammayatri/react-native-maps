@@ -281,7 +281,7 @@ public class MapMarker extends MapFeature {
 
     public void setMarkerHue(float markerHue) {
         this.markerHue = markerHue;
-        update(false);
+        update(true);
     }
 
     public void setAnchor(double x, double y) {
