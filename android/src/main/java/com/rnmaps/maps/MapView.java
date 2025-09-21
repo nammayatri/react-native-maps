@@ -864,8 +864,9 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
 
         builder.tilt((float) camera.getDouble("pitch"));
         builder.bearing((float) camera.getDouble("heading"));
-        builder.zoom((float) camera.getDouble("zoom"));
-
+        if (camera.hasKey("zoom")) {
+            builder.zoom((float) camera.getDouble("zoom"));
+        }
         return builder.build();
     }
 
