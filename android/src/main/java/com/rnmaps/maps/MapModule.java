@@ -95,45 +95,63 @@ public class MapModule extends ReactContextBaseJavaModule {
     final String result = options.hasKey("result") ? options.getString("result") : "file";
 
     MapUIBlock uiBlock = new MapUIBlock(tag, promise, context, view -> {
-        view.map.snapshot(new GoogleMap.SnapshotReadyCallback() {
-          public void onSnapshotReady(@Nullable Bitmap snapshot) {
-
-            // Convert image to requested width/height if necessary
-            if (snapshot == null) {
-              promise.reject("Failed to generate bitmap, snapshot = null");
-              return;
-            }
-            if ((width != 0) && (height != 0) &&
-                (width != snapshot.getWidth() || height != snapshot.getHeight())) {
-              snapshot = Bitmap.createScaledBitmap(snapshot, width, height, true);
-            }
-
-            // Save the snapshot to disk
-            if (result.equals(SNAPSHOT_RESULT_FILE)) {
-              File tempFile;
-              FileOutputStream outputStream;
+        if (view == null || view.map == null) {
+          promise.reject("MAP_NOT_AVAILABLE", "Map view is not available, possibly due to app being in background");
+          return null;
+        }
+        
+        try {
+          view.map.snapshot(new GoogleMap.SnapshotReadyCallback() {
+            public void onSnapshotReady(@Nullable Bitmap snapshot) {
               try {
-                tempFile =
-                    File.createTempFile("AirMapSnapshot", "." + format, context.getCacheDir());
-                outputStream = new FileOutputStream(tempFile);
+                // Convert image to requested width/height if necessary
+                if (snapshot == null) {
+                  promise.reject("SNAPSHOT_FAILED", "Failed to generate bitmap, snapshot = null");
+                  return;
+                }
+                if ((width != 0) && (height != 0) &&
+                    (width != snapshot.getWidth() || height != snapshot.getHeight())) {
+                  snapshot = Bitmap.createScaledBitmap(snapshot, width, height, true);
+                }
+
+                // Save the snapshot to disk
+                if (result.equals(SNAPSHOT_RESULT_FILE)) {
+                  File tempFile;
+                  FileOutputStream outputStream;
+                  try {
+                    tempFile =
+                        File.createTempFile("AirMapSnapshot", "." + format, context.getCacheDir());
+                    outputStream = new FileOutputStream(tempFile);
+                  } catch (Exception e) {
+                    promise.reject("FILE_CREATION_ERROR", "Error creating snapshot file: " + e.getMessage(), e);
+                    return;
+                  }
+                  snapshot.compress(compressFormat, (int) (100.0 * quality), outputStream);
+                  closeQuietly(outputStream);
+                  String uri = Uri.fromFile(tempFile).toString();
+                  promise.resolve(uri);
+                } else if (result.equals(SNAPSHOT_RESULT_BASE64)) {
+                  ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                  snapshot.compress(compressFormat, (int) (100.0 * quality), outputStream);
+                  closeQuietly(outputStream);
+                  byte[] bytes = outputStream.toByteArray();
+                  String data = Base64.encodeToString(bytes, Base64.NO_WRAP);
+                  promise.resolve(data);
+                }
               } catch (Exception e) {
-                promise.reject(e);
-                return;
+                promise.reject("SNAPSHOT_PROCESSING_ERROR", "Error processing snapshot: " + e.getMessage(), e);
               }
-              snapshot.compress(compressFormat, (int) (100.0 * quality), outputStream);
-              closeQuietly(outputStream);
-              String uri = Uri.fromFile(tempFile).toString();
-              promise.resolve(uri);
-            } else if (result.equals(SNAPSHOT_RESULT_BASE64)) {
-              ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-              snapshot.compress(compressFormat, (int) (100.0 * quality), outputStream);
-              closeQuietly(outputStream);
-              byte[] bytes = outputStream.toByteArray();
-              String data = Base64.encodeToString(bytes, Base64.NO_WRAP);
-              promise.resolve(data);
             }
+          });
+        } catch (IllegalStateException e) {
+          if (e.getMessage() != null && e.getMessage().contains("background")) {
+            promise.reject("SNAPSHOT_BACKGROUND_ERROR", "Cannot take snapshot while app is in background", e);
+          } else {
+            promise.reject("SNAPSHOT_STATE_ERROR", "Map is in invalid state for snapshot: " + e.getMessage(), e);
           }
-        });
+        } catch (Exception e) {
+          promise.reject("SNAPSHOT_CALL_ERROR", "Error calling snapshot method: " + e.getMessage(), e);
+        }
 
         return null;
       });
