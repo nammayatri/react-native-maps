@@ -1428,12 +1428,14 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
     int edgeBottomPadding;
 
     public void applyBaseMapPadding(int left, int top, int right, int bottom) {
-        if (super.getHeight() <= 0 || super.getWidth() <= 0) {
-            // the map is not laid out yet and calling setPadding() now has no effect
-            baseLeftMapPadding = left;
-            baseRightMapPadding = right;
-            baseTopMapPadding = top;
-            baseBottomMapPadding = bottom;
+        // Always store the padding values
+        baseLeftMapPadding = left;
+        baseRightMapPadding = right;
+        baseTopMapPadding = top;
+        baseBottomMapPadding = bottom;
+
+        // Only apply to map if map exists and is laid out
+        if (map == null || super.getHeight() <= 0 || super.getWidth() <= 0) {
             setPaddingDeferred = true;
             return;
         }
@@ -1444,11 +1446,6 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
                 edgeRightPadding + baseRightMapPadding,
                 edgeBottomPadding + baseBottomMapPadding);
         CameraUpdate cu = CameraUpdateFactory.newCameraPosition(map.getCameraPosition());
-
-        baseLeftMapPadding = left;
-        baseRightMapPadding = right;
-        baseTopMapPadding = top;
-        baseBottomMapPadding = bottom;
 
         // apply base paddings and restore center position of the map
         map.setPadding(edgeLeftPadding + left,
@@ -1492,6 +1489,8 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
     }
 
     private void appendMapPadding(int iLeft, int iTop, int iRight, int iBottom) {
+        if (map == null) return;
+
         double density = getResources().getDisplayMetrics().density;
 
         edgeLeftPadding = (int) (iLeft * density);
