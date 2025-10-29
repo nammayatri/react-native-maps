@@ -237,7 +237,9 @@ public class MapManager extends ViewGroupManager<MapView> {
 
     @ReactProp(name = "showsTraffic", defaultBoolean = false)
     public void setShowTraffic(MapView view, boolean showTraffic) {
-        view.map.setTrafficEnabled(showTraffic);
+        if (view.map != null) {
+            view.map.setTrafficEnabled(showTraffic);
+        }
     }
 
     @ReactProp(name = "showsBuildings", defaultBoolean = false)

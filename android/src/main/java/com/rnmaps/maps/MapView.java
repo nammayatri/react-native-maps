@@ -1607,6 +1607,8 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
     }
 
     private void appendMapPadding(int iLeft, int iTop, int iRight, int iBottom) {
+        if (map == null) return;
+
         double density = getResources().getDisplayMetrics().density;
 
         edgeLeftPadding = (int) (iLeft * density);
