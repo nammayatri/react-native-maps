@@ -6,7 +6,16 @@
 cmake_minimum_required(VERSION 3.13)
 set(CMAKE_VERBOSE_MAKEFILE on)
 
-file(GLOB react_codegen_SRCS CONFIGURE_DEPENDS *.cpp react/renderer/components/RNMapsSpecs/*.cpp)
+if(DEFINED REACT_ANDROID_DIR)
+  include(${REACT_ANDROID_DIR}/cmake-utils/ReactNative-application.cmake)
+else()
+  message(WARNING "REACT_ANDROID_DIR not defined. Skipping RN macros include.")
+endif()
+
+file(GLOB react_codegen_SRCS CONFIGURE_DEPENDS
+  *.cpp
+  react/renderer/components/RNMapsSpecs/*.cpp
+)
 
 add_library(
   react_codegen_RNMapsSpecs
@@ -25,4 +34,8 @@ target_link_libraries(
   reactnative
 )
 
-target_compile_reactnative_options(react_codegen_RNMapsSpecs PRIVATE)
+if(COMMAND target_compile_reactnative_options)
+  target_compile_reactnative_options(react_codegen_RNMapsSpecs PRIVATE)
+else()
+  message(WARNING "target_compile_reactnative_options not found — skipping RN compile options.")
+endif()
