@@ -1,5 +1,5 @@
 import * as React from 'react';
-import {NativeSyntheticEvent, View, ViewProps} from 'react-native';
+import {NativeSyntheticEvent, ViewProps} from 'react-native';
 import decorateMapComponent, {
   USES_DEFAULT_IMPLEMENTATION,
   SUPPORTED,
