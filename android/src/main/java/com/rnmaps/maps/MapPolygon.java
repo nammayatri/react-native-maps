@@ -181,6 +181,7 @@ public class MapPolygon extends MapFeature {
 
   @Override
   public void addToMap(Object collection) {
+    if(collection == null) return;
     PolygonManager.Collection polygonCollection = (PolygonManager.Collection) collection;
     polygon = polygonCollection.addPolygon(getPolygonOptions());
     polygon.setClickable(this.tappable);

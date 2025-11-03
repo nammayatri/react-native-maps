@@ -1059,7 +1059,7 @@ public static CameraPosition cameraPositionFromMap(ReadableMap camera){
       setPaddingDeferred = true;
       return;
     }
-
+    if(map == null) return;
     // retrieve current camera with current edge paddings configured
     map.setPadding(edgeLeftPadding + baseLeftMapPadding,
         edgeTopPadding + baseTopMapPadding,

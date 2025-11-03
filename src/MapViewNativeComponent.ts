@@ -92,6 +92,6 @@ export const Commands: NativeCommands = codegenNativeCommands<NativeCommands>({
     'fitToCoordinates',
     'setMapBoundaries',
     'setIndoorActiveLevelIndex',
-    'scrollMap'
+    'scrollMap',
   ],
 });
