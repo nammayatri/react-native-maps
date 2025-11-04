@@ -218,7 +218,7 @@ public class MapManager extends ViewGroupManager<MapView> {
         view.setUserLocationFastestInterval(fastestInterval);
     }
 
-    @ReactProp(name = "showsMyLocationButton", defaultBoolean = true)
+    @ReactProp(name = "showsMyLocationButton", defaultBoolean = false)
     public void setShowsMyLocationButton(MapView view, boolean showMyLocationButton) {
         view.setShowsMyLocationButton(showMyLocationButton);
     }
@@ -407,7 +407,7 @@ public class MapManager extends ViewGroupManager<MapView> {
                 if (args == null) {
                     break;
                 }
-                view.fitToCoordinates(args.getArray(0), args.getMap(1), args.getBoolean(2));
+                view.fitToCoordinates(args.getArray(0), args.getMap(1), args.getBoolean(2), args.getInt(3));
                 break;
 
             case "setMapBoundaries":

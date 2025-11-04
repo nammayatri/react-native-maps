@@ -616,7 +616,7 @@ public class MapViewManager extends ViewGroupManager<MapView> implements RNMapsM
     }
 
     @Override
-    public void fitToCoordinates(MapView view, String coordinatesJSON, String edgePaddingJSON, boolean animated) {
+    public void fitToCoordinates(MapView view, String coordinatesJSON, String edgePaddingJSON, boolean animated, int duration) {
         try {
             WritableArray coordinates = null;
             if (coordinatesJSON != null) {
@@ -628,7 +628,7 @@ public class MapViewManager extends ViewGroupManager<MapView> implements RNMapsM
                 JSONObject jsonObject = new JSONObject(edgePaddingJSON);
                 edgePadding = JSONUtil.convertJsonToWritable(jsonObject);
             }
-            view.fitToCoordinates(coordinates, edgePadding, animated);
+            view.fitToCoordinates(coordinates, edgePadding, animated, duration);
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }

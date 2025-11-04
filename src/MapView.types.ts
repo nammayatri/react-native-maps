@@ -1,3 +1,4 @@
+import type { Int32 } from 'react-native/Libraries/Types/CodegenTypes';
 import type {ClickEvent, LatLng, Point, Region} from './sharedTypes';
 import type {NativeSyntheticEvent} from 'react-native';
 
@@ -155,6 +156,7 @@ export type ChangeEvent = NativeSyntheticEvent<{
 export type FitToOptions = {
   edgePadding?: EdgePadding;
   animated?: boolean;
+  duration?: Int32;
 };
 
 export type BoundingBox = {northEast: LatLng; southWest: LatLng};
@@ -208,4 +210,5 @@ export type NativeCommandName =
   | 'setCamera'
   | 'setIndoorActiveLevelIndex'
   | 'setMapBoundaries'
-  | 'takeSnapshot';
+  | 'takeSnapshot'
+  | 'scrollMap';

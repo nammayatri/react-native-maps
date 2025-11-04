@@ -886,6 +886,7 @@ interface NativeCommands {
     coordinatesJSON: string,
     edgePaddingJSON: string,
     animated: boolean,
+    duration:Int32
   ) => void;
   setIndoorActiveLevelIndex: (
     viewRef: React.ElementRef<typeof GoogleMapView>,

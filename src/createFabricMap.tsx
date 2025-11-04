@@ -1,6 +1,6 @@
-import React, {forwardRef, useImperativeHandle, useRef} from 'react';
-import {findNodeHandle} from 'react-native';
-import type {LatLng, Point, Region} from './sharedTypes';
+import React, { forwardRef, useImperativeHandle, useRef } from 'react';
+import { findNodeHandle } from 'react-native';
+import type { LatLng, Point, Region } from './sharedTypes';
 import type {
   Address,
   Camera,
@@ -18,6 +18,7 @@ import GoogleMapView, {
   Commands as GoogleCommands,
   type MapFabricNativeProps as GoogleMapFabricNativeProps,
 } from './specs/NativeComponentGoogleMapView';
+import type { Int32 } from 'react-native/Libraries/Types/CodegenTypes';
 export type MapViewProps = MapFabricNativeProps | GoogleMapFabricNativeProps;
 
 export interface FabricMapHandle {
@@ -38,6 +39,7 @@ export interface FabricMapHandle {
     coordinates: LatLng[],
     edgePadding: EdgePadding,
     animated: boolean,
+    duration: Int32
   ) => void;
 
   getMapBoundaries: () => Promise<MapBoundaries>;
@@ -199,6 +201,7 @@ const createFabricMap = (
         coordinates: LatLng[],
         edgePadding: EdgePadding,
         animated: boolean,
+        duration: Int32,
       ) {
         if (fabricRef.current) {
           try {
@@ -207,6 +210,7 @@ const createFabricMap = (
               JSON.stringify(coordinates),
               JSON.stringify(edgePadding),
               animated,
+              duration,
             );
           } catch {
             throw new Error('Failed to fitToCoordinates');
