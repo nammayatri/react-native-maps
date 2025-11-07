@@ -92,7 +92,7 @@ using namespace facebook::react;
     NSArray *filteredMarkers = [_view.annotations filteredArrayUsingPredicate:filterMarkers];
     [_view showAnnotations:filteredMarkers animated:animated];
 }
-- (void)fitToCoordinates:(NSString *)coordinatesJSON edgePaddingJSON:(NSString *)edgePaddingJSON animated:(BOOL)animated {
+- (void)fitToCoordinates:(NSString *)coordinatesJSON edgePaddingJSON:(NSString *)edgePaddingJSON animated:(BOOL)animated duration:(NSInteger)duration {
     NSArray* coordinatesArr = [RCTConvert arrayFromString:coordinatesJSON];
     NSMutableArray<AIRMapCoordinate*>* mutableArray = [NSMutableArray new];
     for (id json : coordinatesArr){
@@ -102,7 +102,7 @@ using namespace facebook::react;
     NSDictionary* edgePadding = [RCTConvert dictonaryFromString:edgePaddingJSON];
 
     UIEdgeInsets edgeInsets = [RCTConvert UIEdgeInsets:edgePadding];
-    [_view fitToCoordinates:mutableArray edgePadding:edgeInsets animated:animated];
+    [_view fitToCoordinates:mutableArray edgePadding:edgeInsets animated:animated duration:duration];
 
 }
 

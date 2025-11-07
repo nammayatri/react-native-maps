@@ -91,7 +91,7 @@ using namespace facebook::react;
     [_view fitToSuppliedMarkers:markers withEdgePadding:edgePadding animated:animated];
 
 }
-- (void)fitToCoordinates:(NSString *)coordinatesJSON edgePaddingJSON:(NSString *)edgePaddingJSON animated:(BOOL)animated {
+- (void)fitToCoordinates:(NSString *)coordinatesJSON edgePaddingJSON:(NSString *)edgePaddingJSON animated:(BOOL)animated duration:(NSInteger)duration {
     NSArray* coordinatesArr = [RCTConvert arrayFromString:coordinatesJSON];
     NSMutableArray<AIRGoogleMapCoordinate*>* coordinatesArray = [NSMutableArray new];
     for (id json : coordinatesArr){
@@ -100,7 +100,7 @@ using namespace facebook::react;
 
     NSDictionary* edgePadding = [RCTConvert dictonaryFromString:edgePaddingJSON];
 
-    [_view fitToCoordinates:coordinatesArray withEdgePadding:edgePadding animated:animated];
+    [_view fitToCoordinates:coordinatesArray withEdgePadding:edgePadding animated:animated duration:duration];
 }
 - (void) setIndoorActiveLevelIndex:(NSInteger)activeLevelIndex
 {
