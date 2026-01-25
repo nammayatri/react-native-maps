@@ -25,6 +25,7 @@ import androidx.lifecycle.LifecycleOwner;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
+import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.LinearInterpolator;
@@ -505,6 +506,7 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
                     String id = null;
                     String action = "marker-press";
                     String actionType = null;
+                    boolean isPressFeedbackEnabled = false;
 
                     if (tag instanceof java.util.Map) {
                         java.util.Map tagMap = (java.util.Map) tag;
@@ -520,9 +522,16 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
                         if (actionTypeObj instanceof String) {
                              actionType = (String) actionTypeObj;
                         }
+                        Object isPressFeedbackEnabledObj = tagMap.get("isPressFeedbackEnabled");
+                        if (isPressFeedbackEnabledObj instanceof Boolean) {
+                             isPressFeedbackEnabled = (Boolean) isPressFeedbackEnabledObj;
+                        }
                     }
 
                     if (id != null) {
+                        if (isPressFeedbackEnabled) {
+                            performMarkerPressFeedback(marker);
+                        }
                         WritableMap mapEventData = makeClickEventData(marker.getPosition());
                         mapEventData.putString("action", "marker-press");
                         mapEventData.putString("actionType", actionType);
@@ -2005,6 +2014,19 @@ private Bitmap createSimpleLabel(String title) {
     return bitmap;
 }
 
+private void performMarkerPressFeedback(final Marker marker) {
+    this.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+
+    marker.setAlpha(0.6f);
+
+    this.postDelayed(new Runnable() {
+        @Override
+        public void run() {
+            marker.setAlpha(1.0f);
+        }
+    }, 120);
+}
+
 
   // Native nearby markers management
   public void updateNearbyMarkersFromProcessedData(org.json.JSONArray processedMarkers) {
@@ -2035,6 +2057,8 @@ private Bitmap createSimpleLabel(String title) {
               boolean rotationEnabled = markerData.optBoolean("rotationEnabled", false);
               String routeCode = markerData.optString("routeCode", "");
               String action = markerData.optString("action", "marker-press");
+              boolean isVisible = markerData.optBoolean("isVisible", true);
+              boolean isPressFeedbackEnabled = markerData.optBoolean("isPressFeedbackEnabled", false);
               
               
               if (markerAnimators.containsKey(driverId)) {
@@ -2051,8 +2075,10 @@ private Bitmap createSimpleLabel(String title) {
               Marker existingCalloutMarker = nearbyMarkersCalloutCache.get(driverId);
              
               if (existingMarker != null) {
-                  // Calculate bearing if rotation is missing and position changed
-                  
+                      existingMarker.setVisible(isVisible);
+                      if(existingCalloutMarker != null){
+                        existingCalloutMarker.setVisible(isVisible);
+                      }
                       LatLng start = existingMarker.getPosition();
                       LatLng end = new LatLng(lat, lon);
 
@@ -2101,7 +2127,7 @@ private Bitmap createSimpleLabel(String title) {
                       .anchor(0.5f, 0.5f)
                       .zIndex(zIndex)
                       .flat(true)
-                      .visible(true);
+                      .visible(isVisible);
 
                 
                   // Use custom marker icon based on vehicle variant and rotation
@@ -2112,10 +2138,11 @@ private Bitmap createSimpleLabel(String title) {
 
                   if (newMarker != null) {
                     if(!isCluster && !routeCode.isEmpty()) {
-                     java.util.Map<String, String> tagMap = new java.util.HashMap<>();
+                     java.util.Map<String, Object> tagMap = new java.util.HashMap<>();
                           tagMap.put("id", routeCode);
                           tagMap.put("action", "marker-press");
                           tagMap.put("actionType", action);
+                          tagMap.put("isPressFeedbackEnabled", isPressFeedbackEnabled);
                           newMarker.setTag(tagMap);
                       }
                       nearbyMarkersCache.put(driverId, newMarker); 
@@ -2128,7 +2155,7 @@ private Bitmap createSimpleLabel(String title) {
                       .anchor(0.5f, 2.4f)
                       .zIndex(600)
                       .flat(true)
-                      .visible(true);
+                      .visible(isVisible);
                       Marker newCalloutMarker = markerCollection.addMarker(calloutMarkerOptions);
                       if(newCalloutMarker != null) nearbyMarkersCalloutCache.put(driverId, newCalloutMarker);
                   }
