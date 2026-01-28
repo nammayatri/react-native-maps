@@ -2027,6 +2027,13 @@ private void performMarkerPressFeedback(final Marker marker) {
     }, 120);
 }
 
+private final Double POS_EPS_DEG = 0.00001;
+
+private boolean hasPositionChanged(LatLng p1, LatLng p2) {
+    return Math.abs(p1.latitude - p2.latitude) >= POS_EPS_DEG
+        && Math.abs(p1.longitude - p2.longitude) >= POS_EPS_DEG;
+}
+
 
   // Native nearby markers management
   public void updateNearbyMarkersFromProcessedData(org.json.JSONArray processedMarkers) {
@@ -2068,7 +2075,7 @@ private void performMarkerPressFeedback(final Marker marker) {
                   }
                   markerAnimators.remove(driverId);
               }
-              
+
               seenDrivers.add(driverId);
 
               Marker existingMarker = nearbyMarkersCache.get(driverId);
@@ -2081,9 +2088,14 @@ private void performMarkerPressFeedback(final Marker marker) {
                       }
                       LatLng start = existingMarker.getPosition();
                       LatLng end = new LatLng(lat, lon);
+                      Log.d(
+    "Rotation Change MarkerMove",
+    "start=(" + start.latitude + ", " + start.longitude + ")" +
+    " end=(" + end.latitude + ", " + end.longitude + ")"
+);
 
                     if(!isCluster){
-                      if (start.latitude != end.latitude || start.longitude != end.longitude) {
+                      if (hasPositionChanged(start, end)) {
                           Location locStart = new Location("start");
                           locStart.setLatitude(start.latitude);
                           locStart.setLongitude(start.longitude);
@@ -2092,14 +2104,17 @@ private void performMarkerPressFeedback(final Marker marker) {
                           locEnd.setLatitude(end.latitude);
                           locEnd.setLongitude(end.longitude);
                             
+                          System.out.println("Rotation change requested if " + rotation + " for driver " + driverId + " incoming " + locStart.bearingTo(locEnd));
                           rotation = locStart.bearingTo(locEnd);
                       } else {
+                            System.out.println("Rotation change requested else " + rotation + " for driver " + driverId + " incoming " + existingMarker.getRotation());
                           rotation = existingMarker.getRotation();
                       }
                 }
 
                   // Update existing marker
                   if (shouldAnimate) {
+                    if(hasPositionChanged(start, end)){
                       ValueAnimator animator = animateMarkers(existingMarker,existingCalloutMarker, new com.google.android.gms.maps.model.LatLng(lat, lon), animationDuration);
                       markerAnimators.put(driverId, animator);
                       animator.addListener(new AnimatorListenerAdapter() {
@@ -2110,13 +2125,18 @@ private void performMarkerPressFeedback(final Marker marker) {
                               }
                           }
                       });
+                    };
                   } else {
                       existingMarker.setPosition(new com.google.android.gms.maps.model.LatLng(lat, lon));
                       if(existingCalloutMarker != null) existingCalloutMarker.setPosition(new com.google.android.gms.maps.model.LatLng(lat, lon));
                   }
                   existingMarker.setZIndex(zIndex);
-                  if(rotationEnabled) existingMarker.setRotation((float) rotation);
-                  else existingMarker.setIcon(getIconFromAssets(vehicleVariant, rotation, isCluster, clusterCount, size,rotationEnabled));
+                  if(rotationEnabled){
+                    System.out.println("Rotation change rotation requested else " + rotation + " for driver " + driverId + " existing " + existingMarker.getRotation());
+                    existingMarker.setRotation((float) rotation);
+                  } else {
+                    existingMarker.setIcon(getIconFromAssets(vehicleVariant, rotation, isCluster, clusterCount, size,rotationEnabled));
+                  }
  
                   // Update icon if vehicle variant changed
                   
