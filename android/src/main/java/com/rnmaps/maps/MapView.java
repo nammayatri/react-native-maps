@@ -2000,7 +2000,7 @@ private Bitmap createSimpleLabel(String title) {
     Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     borderPaint.setColor(Color.BLACK);      // border color
     borderPaint.setStyle(Paint.Style.STROKE);
-    borderPaint.setStrokeWidth(1f);         // thickness (px)
+    borderPaint.setStrokeWidth(0.5f);         // thickness (px)
 
     canvas.drawRoundRect(rectF, cornerRadius, cornerRadius, borderPaint);
     // --------------
@@ -2033,6 +2033,30 @@ private boolean hasPositionChanged(LatLng p1, LatLng p2) {
     return Math.abs(p1.latitude - p2.latitude) >= POS_EPS_DEG
         && Math.abs(p1.longitude - p2.longitude) >= POS_EPS_DEG;
 }
+
+private float clamp(float value, float min, float max) {
+    return Math.max(min, Math.min(max, value));
+}
+
+
+private float getAdaptiveCalloutAnchorV(float rotationDegrees) {
+    float r = (rotationDegrees + 360f) % 360f;
+
+    final float BASE_ANCHOR = 2.4f;
+
+    final float EAST_WEST_ANCHOR = 1.9f;
+
+    if (r >= 50f && r <= 130f) {
+        return EAST_WEST_ANCHOR;
+    }
+
+    if (r >= 230f && r <= 310f) {
+        return EAST_WEST_ANCHOR;
+    }
+
+    return BASE_ANCHOR;
+}
+
 
 
   // Native nearby markers management
@@ -2067,6 +2091,9 @@ private boolean hasPositionChanged(LatLng p1, LatLng p2) {
               boolean isVisible = markerData.optBoolean("isVisible", true);
               boolean isPressFeedbackEnabled = markerData.optBoolean("isPressFeedbackEnabled", false);
               
+              float calloutAnchorV = 2.4f;
+              float calloutAnchorU = 0.5f;
+
               
               if (markerAnimators.containsKey(driverId)) {
                   ValueAnimator animator = markerAnimators.get(driverId);
@@ -2088,11 +2115,7 @@ private boolean hasPositionChanged(LatLng p1, LatLng p2) {
                       }
                       LatLng start = existingMarker.getPosition();
                       LatLng end = new LatLng(lat, lon);
-                      Log.d(
-    "Rotation Change MarkerMove",
-    "start=(" + start.latitude + ", " + start.longitude + ")" +
-    " end=(" + end.latitude + ", " + end.longitude + ")"
-);
+                    
 
                     if(!isCluster){
                       if (hasPositionChanged(start, end)) {
@@ -2103,14 +2126,24 @@ private boolean hasPositionChanged(LatLng p1, LatLng p2) {
                           Location locEnd = new Location("end");
                           locEnd.setLatitude(end.latitude);
                           locEnd.setLongitude(end.longitude);
-                            
-                          System.out.println("Rotation change requested if " + rotation + " for driver " + driverId + " incoming " + locStart.bearingTo(locEnd));
                           rotation = locStart.bearingTo(locEnd);
                       } else {
-                            System.out.println("Rotation change requested else " + rotation + " for driver " + driverId + " incoming " + existingMarker.getRotation());
                           rotation = existingMarker.getRotation();
                       }
+                      
+                      
                 }
+
+                calloutAnchorV = getAdaptiveCalloutAnchorV((float) rotation);
+                if(existingCalloutMarker != null) {
+                  existingCalloutMarker.setAnchor(calloutAnchorU, calloutAnchorV);
+                }
+
+                 if(rotationEnabled){
+                    existingMarker.setRotation((float) rotation);
+                  } else {
+                    existingMarker.setIcon(getIconFromAssets(vehicleVariant, rotation, isCluster, clusterCount, size,rotationEnabled));
+                  }
 
                   // Update existing marker
                   if (shouldAnimate) {
@@ -2131,12 +2164,7 @@ private boolean hasPositionChanged(LatLng p1, LatLng p2) {
                       if(existingCalloutMarker != null) existingCalloutMarker.setPosition(new com.google.android.gms.maps.model.LatLng(lat, lon));
                   }
                   existingMarker.setZIndex(zIndex);
-                  if(rotationEnabled){
-                    System.out.println("Rotation change rotation requested else " + rotation + " for driver " + driverId + " existing " + existingMarker.getRotation());
-                    existingMarker.setRotation((float) rotation);
-                  } else {
-                    existingMarker.setIcon(getIconFromAssets(vehicleVariant, rotation, isCluster, clusterCount, size,rotationEnabled));
-                  }
+                 
  
                   // Update icon if vehicle variant changed
                   
@@ -2172,7 +2200,7 @@ private boolean hasPositionChanged(LatLng p1, LatLng p2) {
                     MarkerOptions calloutMarkerOptions = new MarkerOptions()
                       .position(new com.google.android.gms.maps.model.LatLng(lat, lon))
                       .icon(com.google.android.gms.maps.model.BitmapDescriptorFactory.fromBitmap(labelBitmap))
-                      .anchor(0.5f, 2.4f)
+                      .anchor(calloutAnchorU, calloutAnchorV)
                       .zIndex(600)
                       .flat(true)
                       .visible(isVisible);
