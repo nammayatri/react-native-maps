@@ -17,6 +17,8 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.drawable.Drawable;
+import androidx.core.content.ContextCompat;
 
 
 import androidx.lifecycle.DefaultLifecycleObserver;
@@ -1967,52 +1969,122 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
         }
         return false;
     }
-private Bitmap createSimpleLabel(String title) {
-    // Text paint
+
+private Bitmap createSimpleLabel(
+        String title,
+        List<String> iconNames,
+        org.json.JSONObject calloutConfig
+) {
+
+    Context context = getContext();
+    float density = context.getResources().getDisplayMetrics().density;
+
+    // ---------- CONFIG ----------
+    int padding = (int) (8 * density);
+    int iconSize = (int) (14 * density);
+    int iconSpacing = (int) (4 * density);
+    float textSize = 13 * density;
+    float cornerRadius = 12 * density;
+    float borderWidth = 0.5f * density;
+
+    if (calloutConfig != null) {
+        padding = (int) (calloutConfig.optDouble("padding", 8) * density);
+        iconSize = (int) (calloutConfig.optDouble("iconSize", 14) * density);
+        iconSpacing = (int) (calloutConfig.optDouble("iconSpacing", 4) * density);
+        textSize = (float) (calloutConfig.optDouble("textSize", 13) * density);
+        cornerRadius = (float) (calloutConfig.optDouble("cornerRadius", 12) * density);
+        borderWidth = (float) (calloutConfig.optDouble("borderWidth", 0.5) * density);
+    }
+    // ----------------------------
+
     Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     textPaint.setColor(Color.BLACK);
-    textPaint.setTextSize(36f);
+    textPaint.setTextSize(textSize);
 
-    // Measure text
-    Rect bounds = new Rect();
-    textPaint.getTextBounds(title, 0, title.length(), bounds);
+    Paint.FontMetrics fm = textPaint.getFontMetrics();
+    float textHeight = fm.bottom - fm.top;
+    float textWidth = textPaint.measureText(title);
 
-    int padding = 20;
-    int width = bounds.width() + padding * 2;
-    int height = bounds.height() + padding * 2;
+    int iconCount = (iconNames != null) ? iconNames.size() : 0;
 
-    // Create bitmap
+    int totalIconsWidth = 0;
+    if (iconCount > 0) {
+        totalIconsWidth =
+                (iconSize * iconCount)
+                + (iconSpacing * (iconCount - 1));
+    }
+
+    int width = (int) (
+            padding * 2
+            + textWidth
+            + (iconCount > 0 ? padding : 0)
+            + totalIconsWidth
+    );
+
+    int height = (int) (
+            Math.max(iconSize, textHeight)
+            + padding * 2
+    );
+
     Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
     Canvas canvas = new Canvas(bitmap);
 
-    // Background paint
+    // Background
     Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     bgPaint.setColor(Color.WHITE);
 
-    // Rounded rectangle bounds
-    android.graphics.RectF rectF = new android.graphics.RectF(0, 0, width, height);
-    float cornerRadius = 15f;
-
-    // Draw white background rounded rectangle
+    RectF rectF = new RectF(0, 0, width, height);
     canvas.drawRoundRect(rectF, cornerRadius, cornerRadius, bgPaint);
 
-    // --- BORDER ---
+    // Border
     Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    borderPaint.setColor(Color.BLACK);      // border color
+    borderPaint.setColor(Color.BLACK);
     borderPaint.setStyle(Paint.Style.STROKE);
-    borderPaint.setStrokeWidth(0.5f);         // thickness (px)
-
+    borderPaint.setStrokeWidth(borderWidth);
     canvas.drawRoundRect(rectF, cornerRadius, cornerRadius, borderPaint);
-    // --------------
 
+    // Draw Text
+    float textX = padding;
+    float textY = height / 2f - (fm.ascent + fm.descent) / 2f;
+    canvas.drawText(title, textX, textY, textPaint);
 
-    // Draw black text
-    float x = padding;
-    float y = padding - bounds.top; // align text baseline
-    canvas.drawText(title, x, y, textPaint);
+    // Draw Icons (RIGHT)
+    if (iconCount > 0) {
+
+        int startX = (int) (padding + textWidth + padding);
+
+        for (int i = 0; i < iconCount; i++) {
+
+            String assetName = iconNames.get(i);
+
+            int resId = getResources().getIdentifier(
+                    assetName,
+                    "drawable",
+                    context.getPackageName()
+            );
+
+            if (resId != 0) {
+
+                Drawable drawable =
+                        ContextCompat.getDrawable(context, resId);
+
+                if (drawable != null) {
+
+                    int left = startX + i * (iconSize + iconSpacing);
+                    int top = (height - iconSize) / 2;
+                    int right = left + iconSize;
+                    int bottom = top + iconSize;
+
+                    drawable.setBounds(left, top, right, bottom);
+                    drawable.draw(canvas);
+                }
+            }
+        }
+    }
 
     return bitmap;
 }
+
 
 private void performMarkerPressFeedback(final Marker marker) {
     this.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
@@ -2090,6 +2162,21 @@ private float getAdaptiveCalloutAnchorV(float rotationDegrees) {
               String action = markerData.optString("action", "marker-press");
               boolean isVisible = markerData.optBoolean("isVisible", true);
               boolean isPressFeedbackEnabled = markerData.optBoolean("isPressFeedbackEnabled", false);
+              org.json.JSONArray iconsArray = markerData.optJSONArray("icons");
+              org.json.JSONObject calloutConfig = markerData.optJSONObject("calloutConfig");
+
+              List<String> labelIcons = new ArrayList<>();
+
+             
+
+              if (iconsArray != null) {
+                 
+                  for (int j = 0; j < iconsArray.length(); j++) {
+                      
+                      labelIcons.add(iconsArray.getString(j));
+                  }
+              }
+
               
               float calloutAnchorV = 2.4f;
               float calloutAnchorU = 0.5f;
@@ -2196,7 +2283,7 @@ private float getAdaptiveCalloutAnchorV(float rotationDegrees) {
                       nearbyMarkersCache.put(driverId, newMarker); 
                   }
                   if(!title.isEmpty()) {
-                    Bitmap labelBitmap = createSimpleLabel(title);
+                    Bitmap labelBitmap = createSimpleLabel(title, labelIcons, calloutConfig);
                     MarkerOptions calloutMarkerOptions = new MarkerOptions()
                       .position(new com.google.android.gms.maps.model.LatLng(lat, lon))
                       .icon(com.google.android.gms.maps.model.BitmapDescriptorFactory.fromBitmap(labelBitmap))
