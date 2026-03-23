@@ -30,6 +30,7 @@ import android.view.MotionEvent;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.LinearInterpolator;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
@@ -2109,7 +2110,7 @@ private final Double POS_EPS_DEG = 0.00001;
 
 private boolean hasPositionChanged(LatLng p1, LatLng p2) {
     return Math.abs(p1.latitude - p2.latitude) >= POS_EPS_DEG
-        && Math.abs(p1.longitude - p2.longitude) >= POS_EPS_DEG;
+        || Math.abs(p1.longitude - p2.longitude) >= POS_EPS_DEG;
 }
 
 private float clamp(float value, float min, float max) {
@@ -2336,35 +2337,53 @@ private float getAdaptiveCalloutAnchorV(float rotationDegrees) {
 
   private ValueAnimator animateMarkers(
         final Marker iconMarker,
-        final Marker calloutMarker,  // can be null
+        final Marker calloutMarker,
         final LatLng toPosition,
         int duration
 ) {
-
     final LatLng startPosition = iconMarker.getPosition();
-    //if (startPosition.equals(toPosition)) return;
 
     ValueAnimator animator = ValueAnimator.ofFloat(0, 1);
     animator.setDuration(duration);
-    animator.setInterpolator(new LinearInterpolator());
+    
+    animator.setInterpolator(new android.view.animation.LinearInterpolator());
 
     animator.addUpdateListener(animation -> {
         float v = (float) animation.getAnimatedFraction();
 
-        double lng = v * toPosition.longitude + (1 - v) * startPosition.longitude;
-        double lat = v * toPosition.latitude + (1 - v) * startPosition.latitude;
-        LatLng newPos = new LatLng(lat, lng);
+        double lng = startPosition.longitude + v * (toPosition.longitude - startPosition.longitude);
 
-        iconMarker.setPosition(newPos);
+        double startLatRad = Math.toRadians(startPosition.latitude);
+        double endLatRad = Math.toRadians(toPosition.latitude);
 
-        if (calloutMarker != null) {
-            calloutMarker.setPosition(newPos);
+        double startTemp = Math.tan(Math.PI / 4.0 + startLatRad / 2.0);
+        double endTemp = Math.tan(Math.PI / 4.0 + endLatRad / 2.0);
+
+        if (startTemp > 0 && endTemp > 0) {
+            double startY = Math.log(startTemp);
+            double endY = Math.log(endTemp);
+            double currentY = startY + v * (endY - startY);
+            
+            double lat = Math.toDegrees(2.0 * Math.atan(Math.exp(currentY)) - Math.PI / 2.0);
+            LatLng newPos = new LatLng(lat, lng);
+            iconMarker.setPosition(newPos);
+            if (calloutMarker != null) {
+                calloutMarker.setPosition(newPos);
+            }
+        } else {
+            double lat = startPosition.latitude + v * (toPosition.latitude - startPosition.latitude);
+            LatLng newPos = new LatLng(lat, lng);
+            iconMarker.setPosition(newPos);
+            if (calloutMarker != null) {
+                calloutMarker.setPosition(newPos);
+            }
         }
     });
 
     animator.start();
     return animator;
 }
+
 
 
   // Get icon from assets with size reduction
