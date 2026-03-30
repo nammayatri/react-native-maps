@@ -182,6 +182,8 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
     private String kmlSrc = null;
     private final Map<String, Marker> nearbyMarkersCache = new HashMap<>();
     private final Map<String, Marker> nearbyMarkersCalloutCache = new HashMap<>();    
+    private final Map<String, com.google.android.gms.maps.model.BitmapDescriptor> nearbyMarker2DIconsCache = new HashMap<>();
+    private final Map<String, com.google.android.gms.maps.model.BitmapDescriptor> nearbyMarker3DIconsCache = new HashMap<>();
     private final Map<String, ValueAnimator> markerAnimators = new HashMap<>();
 
     private static boolean contextHasBug(Context context) {
@@ -1979,8 +1981,9 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
 
 private Bitmap createSimpleLabel(
         String title,
-        List<String> iconNames,
-        org.json.JSONObject calloutConfig
+        List<String> leftlabelIcons,
+        List<String> rightlabelIcons,
+        JSONObject calloutConfig
 ) {
 
     Context context = getContext();
@@ -2012,57 +2015,59 @@ private Bitmap createSimpleLabel(
     float textHeight = fm.bottom - fm.top;
     float textWidth = textPaint.measureText(title);
 
-    int iconCount = (iconNames != null) ? iconNames.size() : 0;
+    int leftIconCount = (leftlabelIcons != null) ? leftlabelIcons.size() : 0;
+    int rightIconCount = (rightlabelIcons != null) ? rightlabelIcons.size() : 0;
 
-    int totalIconsWidth = 0;
-    if (iconCount > 0) {
-        totalIconsWidth =
-                (iconSize * iconCount)
-                + (iconSpacing * (iconCount - 1));
+    int leftIconsWidth = 0;
+    if (leftIconCount > 0) {
+        leftIconsWidth = (iconSize * leftIconCount)
+                + (iconSpacing * (leftIconCount - 1));
+    }
+
+    int rightIconsWidth = 0;
+    if (rightIconCount > 0) {
+        rightIconsWidth = (iconSize * rightIconCount)
+                + (iconSpacing * (rightIconCount - 1));
     }
 
     int width = (int) (
             padding * 2
+            + leftIconsWidth
+            + (leftIconCount > 0 ? padding : 0)
             + textWidth
-            + (iconCount > 0 ? padding : 0)
-            + totalIconsWidth
+            + (rightIconCount > 0 ? padding : 0)
+            + rightIconsWidth
     );
 
     int height = (int) (
             Math.max(iconSize, textHeight)
-            + padding * 2
+                    + padding * 2
     );
 
     Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
     Canvas canvas = new Canvas(bitmap);
 
-    // Background
+    // ---------- Background ----------
     Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     bgPaint.setColor(Color.WHITE);
 
     RectF rectF = new RectF(0, 0, width, height);
     canvas.drawRoundRect(rectF, cornerRadius, cornerRadius, bgPaint);
 
-    // Border
+    // ---------- Border ----------
     Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     borderPaint.setColor(Color.BLACK);
     borderPaint.setStyle(Paint.Style.STROKE);
     borderPaint.setStrokeWidth(borderWidth);
     canvas.drawRoundRect(rectF, cornerRadius, cornerRadius, borderPaint);
 
-    // Draw Text
-    float textX = padding;
-    float textY = height / 2f - (fm.ascent + fm.descent) / 2f;
-    canvas.drawText(title, textX, textY, textPaint);
+    int currentX = padding;
 
-    // Draw Icons (RIGHT)
-    if (iconCount > 0) {
+    // ---------- LEFT ICONS ----------
+    if (leftIconCount > 0) {
+        for (int i = 0; i < leftIconCount; i++) {
 
-        int startX = (int) (padding + textWidth + padding);
-
-        for (int i = 0; i < iconCount; i++) {
-
-            String assetName = iconNames.get(i);
+            String assetName = leftlabelIcons.get(i);
 
             int resId = getResources().getIdentifier(
                     assetName,
@@ -2071,19 +2076,62 @@ private Bitmap createSimpleLabel(
             );
 
             if (resId != 0) {
-
-                Drawable drawable =
-                        ContextCompat.getDrawable(context, resId);
+                Drawable drawable = ContextCompat.getDrawable(context, resId);
 
                 if (drawable != null) {
-
-                    int left = startX + i * (iconSize + iconSpacing);
+                    int left = currentX;
                     int top = (height - iconSize) / 2;
                     int right = left + iconSize;
                     int bottom = top + iconSize;
 
                     drawable.setBounds(left, top, right, bottom);
                     drawable.draw(canvas);
+
+                    currentX += iconSize + iconSpacing;
+                }
+            }
+        }
+
+        currentX += (padding - iconSpacing);
+    }
+
+    // ---------- TEXT ----------
+    float textX = currentX;
+    float textY = height / 2f - (fm.ascent + fm.descent) / 2f;
+
+    canvas.drawText(title, textX, textY, textPaint);
+
+    currentX += textWidth;
+
+    if (rightIconCount > 0) {
+        currentX += padding;
+    }
+
+    // ---------- RIGHT ICONS ----------
+    if (rightIconCount > 0) {
+        for (int i = 0; i < rightIconCount; i++) {
+
+            String assetName = rightlabelIcons.get(i);
+
+            int resId = getResources().getIdentifier(
+                    assetName,
+                    "drawable",
+                    context.getPackageName()
+            );
+
+            if (resId != 0) {
+                Drawable drawable = ContextCompat.getDrawable(context, resId);
+
+                if (drawable != null) {
+                    int left = currentX;
+                    int top = (height - iconSize) / 2;
+                    int right = left + iconSize;
+                    int bottom = top + iconSize;
+
+                    drawable.setBounds(left, top, right, bottom);
+                    drawable.draw(canvas);
+
+                    currentX += iconSize + iconSpacing;
                 }
             }
         }
@@ -2091,7 +2139,6 @@ private Bitmap createSimpleLabel(
 
     return bitmap;
 }
-
 
 private void performMarkerPressFeedback(final Marker marker) {
     this.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
@@ -2169,21 +2216,27 @@ private float getAdaptiveCalloutAnchorV(float rotationDegrees) {
               String action = markerData.optString("action", "marker-press");
               boolean isVisible = markerData.optBoolean("isVisible", true);
               boolean isPressFeedbackEnabled = markerData.optBoolean("isPressFeedbackEnabled", false);
-              org.json.JSONArray iconsArray = markerData.optJSONArray("icons");
+              org.json.JSONArray rightIconsArray = markerData.optJSONArray("rightIcons");
+              org.json.JSONArray leftIconsArray = markerData.optJSONArray("leftIcons");
               org.json.JSONObject calloutConfig = markerData.optJSONObject("calloutConfig");
+              boolean hideCallout = markerData.optBoolean("hideCallout", false);
+              String markerType = markerData.optString("markerType", "3D");
+              boolean forceUpdate = markerData.optBoolean("forceUpdate", false);
 
-              List<String> labelIcons = new ArrayList<>();
+              List<String> leftlabelIcons = new ArrayList<>();
+              List<String> rightlabelIcons = new ArrayList<>();
 
-             
-
-              if (iconsArray != null) {
-                 
-                  for (int j = 0; j < iconsArray.length(); j++) {
-                      
-                      labelIcons.add(iconsArray.getString(j));
+              if (leftIconsArray != null) {
+                  for (int j = 0; j < leftIconsArray.length(); j++) {
+                      leftlabelIcons.add(leftIconsArray.getString(j));
                   }
               }
 
+              if (rightIconsArray != null) {
+                  for (int j = 0; j < rightIconsArray.length(); j++) {
+                      rightlabelIcons.add(rightIconsArray.getString(j));
+                  }
+              }
               
               float calloutAnchorV = 2.4f;
               float calloutAnchorU = 0.5f;
@@ -2203,10 +2256,42 @@ private float getAdaptiveCalloutAnchorV(float rotationDegrees) {
               Marker existingCalloutMarker = nearbyMarkersCalloutCache.get(driverId);
              
               if (existingMarker != null) {
-                      existingMarker.setVisible(isVisible);
+                    existingMarker.setVisible(isVisible);
                       if(existingCalloutMarker != null){
-                        existingCalloutMarker.setVisible(isVisible);
+                         existingCalloutMarker.setVisible(isVisible && !hideCallout);
+                        if(forceUpdate){
+                            if(markerType.equals("3D")){
+                                 
+                      com.google.android.gms.maps.model.BitmapDescriptor marker3DIcon = null;
+                      if(nearbyMarker3DIconsCache.containsKey(driverId)){
+                          marker3DIcon = nearbyMarker3DIconsCache.get(driverId);
+                      } else {
+                         marker3DIcon = getIconFromAssets(vehicleVariant, rotation, isCluster, clusterCount, size,rotationEnabled);
+                         nearbyMarker3DIconsCache.put(driverId, marker3DIcon);
                       }
+                     
+                      existingMarker.setIcon(marker3DIcon);
+                  }
+                  else{
+                    com.google.android.gms.maps.model.BitmapDescriptor marker2DIcon = null;
+                      if(nearbyMarker2DIconsCache.containsKey(driverId)){
+                          marker2DIcon = nearbyMarker2DIconsCache.get(driverId);
+                      } else {
+                        Bitmap labelBitmap = createSimpleLabel(title, leftlabelIcons, rightlabelIcons, calloutConfig);
+                        marker2DIcon =  com.google.android.gms.maps.model.BitmapDescriptorFactory.fromBitmap(labelBitmap);
+                        nearbyMarker2DIconsCache.put(driverId, marker2DIcon);
+                      }
+                        existingMarker.setIcon(marker2DIcon);
+                        existingMarker.setRotation(0);
+                  
+                        }
+                     
+                      }
+                       else{
+                        existingCalloutMarker.setVisible(isVisible && !hideCallout);
+                       }
+                      }
+
                       LatLng start = existingMarker.getPosition();
                       LatLng end = new LatLng(lat, lon);
                     
@@ -2221,11 +2306,9 @@ private float getAdaptiveCalloutAnchorV(float rotationDegrees) {
                           locEnd.setLatitude(end.latitude);
                           locEnd.setLongitude(end.longitude);
                           rotation = locStart.bearingTo(locEnd);
-                      } else {
+                      } else if(forceUpdate == false) {
                           rotation = existingMarker.getRotation();
                       }
-                      
-                      
                 }
 
                 calloutAnchorV = getAdaptiveCalloutAnchorV((float) rotation);
@@ -2234,6 +2317,9 @@ private float getAdaptiveCalloutAnchorV(float rotationDegrees) {
                 }
 
                  if(rotationEnabled){
+                    if(markerType.equals("2D")){
+                        rotation = 0;
+                    }
                     existingMarker.setRotation((float) rotation);
                   } else {
                     existingMarker.setIcon(getIconFromAssets(vehicleVariant, rotation, isCluster, clusterCount, size,rotationEnabled));
@@ -2273,7 +2359,17 @@ private float getAdaptiveCalloutAnchorV(float rotationDegrees) {
 
                 
                   // Use custom marker icon based on vehicle variant and rotation
-                  markerOptions.icon(getIconFromAssets(vehicleVariant, rotation, isCluster, clusterCount, size,rotationEnabled));
+                  if(markerType.equals("3D")){
+                      com.google.android.gms.maps.model.BitmapDescriptor marker3DIcon = getIconFromAssets(vehicleVariant, rotation, isCluster, clusterCount, size,rotationEnabled);
+                      nearbyMarker3DIconsCache.put(driverId, marker3DIcon);
+                      markerOptions.icon(marker3DIcon);
+                  }
+                  else{
+                        Bitmap labelBitmap = createSimpleLabel(title, leftlabelIcons, rightlabelIcons, calloutConfig);
+                        com.google.android.gms.maps.model.BitmapDescriptor marker2DIcon =  com.google.android.gms.maps.model.BitmapDescriptorFactory.fromBitmap(labelBitmap);
+                        nearbyMarker2DIconsCache.put(driverId, marker2DIcon);
+                        markerOptions.icon(marker2DIcon);
+                  }
 
                   Marker newMarker = markerCollection.addMarker(markerOptions);
                  if(rotationEnabled && rotation != -1) newMarker.setRotation((float) rotation);
@@ -2291,14 +2387,15 @@ private float getAdaptiveCalloutAnchorV(float rotationDegrees) {
                       nearbyMarkersCache.put(driverId, newMarker); 
                   }
                   if(!title.isEmpty()) {
-                    Bitmap labelBitmap = createSimpleLabel(title, labelIcons, calloutConfig);
+                    Bitmap labelBitmap = createSimpleLabel(title, leftlabelIcons, rightlabelIcons, calloutConfig);
                     MarkerOptions calloutMarkerOptions = new MarkerOptions()
                       .position(new com.google.android.gms.maps.model.LatLng(lat, lon))
                       .icon(com.google.android.gms.maps.model.BitmapDescriptorFactory.fromBitmap(labelBitmap))
                       .anchor(calloutAnchorU, calloutAnchorV)
                       .zIndex(600)
                       .flat(true)
-                      .visible(isVisible);
+                      .visible(isVisible && !hideCallout);
+
                       Marker newCalloutMarker = markerCollection.addMarker(calloutMarkerOptions);
                       if(newCalloutMarker != null) nearbyMarkersCalloutCache.put(driverId, newCalloutMarker);
                   }
