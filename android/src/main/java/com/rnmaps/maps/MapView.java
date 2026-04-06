@@ -1979,6 +1979,41 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
         return false;
     }
 
+private int calculateIconsWidth(int iconCount, int iconSize, int iconSpacing) {
+    if (iconCount <= 0) return 0;
+    return (iconSize * iconCount) + (iconSpacing * (iconCount - 1));
+}
+
+private int drawIcons(Context context, Canvas canvas, List<String> icons, int startX, int height, int iconSize, int iconSpacing) {
+    if (icons == null || icons.isEmpty()) return startX;
+
+    int currentX = startX;
+    for (String assetName : icons) {
+        int resId = context.getResources().getIdentifier(
+                assetName,
+                "drawable",
+                context.getPackageName()
+        );
+
+        if (resId != 0) {
+            Drawable drawable = ContextCompat.getDrawable(context, resId);
+
+            if (drawable != null) {
+                int left = currentX;
+                int top = (height - iconSize) / 2;
+                int right = left + iconSize;
+                int bottom = top + iconSize;
+
+                drawable.setBounds(left, top, right, bottom);
+                drawable.draw(canvas);
+
+                currentX += iconSize + iconSpacing;
+            }
+        }
+    }
+    return currentX;
+}
+
 private Bitmap createSimpleLabel(
         String title,
         List<String> leftlabelIcons,
@@ -2018,17 +2053,8 @@ private Bitmap createSimpleLabel(
     int leftIconCount = (leftlabelIcons != null) ? leftlabelIcons.size() : 0;
     int rightIconCount = (rightlabelIcons != null) ? rightlabelIcons.size() : 0;
 
-    int leftIconsWidth = 0;
-    if (leftIconCount > 0) {
-        leftIconsWidth = (iconSize * leftIconCount)
-                + (iconSpacing * (leftIconCount - 1));
-    }
-
-    int rightIconsWidth = 0;
-    if (rightIconCount > 0) {
-        rightIconsWidth = (iconSize * rightIconCount)
-                + (iconSpacing * (rightIconCount - 1));
-    }
+    int leftIconsWidth = calculateIconsWidth(leftIconCount, iconSize, iconSpacing);
+    int rightIconsWidth = calculateIconsWidth(rightIconCount, iconSize, iconSpacing);
 
     int width = (int) (
             padding * 2
@@ -2065,33 +2091,7 @@ private Bitmap createSimpleLabel(
 
     // ---------- LEFT ICONS ----------
     if (leftIconCount > 0) {
-        for (int i = 0; i < leftIconCount; i++) {
-
-            String assetName = leftlabelIcons.get(i);
-
-            int resId = getResources().getIdentifier(
-                    assetName,
-                    "drawable",
-                    context.getPackageName()
-            );
-
-            if (resId != 0) {
-                Drawable drawable = ContextCompat.getDrawable(context, resId);
-
-                if (drawable != null) {
-                    int left = currentX;
-                    int top = (height - iconSize) / 2;
-                    int right = left + iconSize;
-                    int bottom = top + iconSize;
-
-                    drawable.setBounds(left, top, right, bottom);
-                    drawable.draw(canvas);
-
-                    currentX += iconSize + iconSpacing;
-                }
-            }
-        }
-
+        currentX = drawIcons(context, canvas, leftlabelIcons, currentX, height, iconSize, iconSpacing);
         currentX += (padding - iconSpacing);
     }
 
@@ -2109,32 +2109,7 @@ private Bitmap createSimpleLabel(
 
     // ---------- RIGHT ICONS ----------
     if (rightIconCount > 0) {
-        for (int i = 0; i < rightIconCount; i++) {
-
-            String assetName = rightlabelIcons.get(i);
-
-            int resId = getResources().getIdentifier(
-                    assetName,
-                    "drawable",
-                    context.getPackageName()
-            );
-
-            if (resId != 0) {
-                Drawable drawable = ContextCompat.getDrawable(context, resId);
-
-                if (drawable != null) {
-                    int left = currentX;
-                    int top = (height - iconSize) / 2;
-                    int right = left + iconSize;
-                    int bottom = top + iconSize;
-
-                    drawable.setBounds(left, top, right, bottom);
-                    drawable.draw(canvas);
-
-                    currentX += iconSize + iconSpacing;
-                }
-            }
-        }
+        drawIcons(context, canvas, rightlabelIcons, currentX, height, iconSize, iconSpacing);
     }
 
     return bitmap;
@@ -2184,6 +2159,44 @@ private float getAdaptiveCalloutAnchorV(float rotationDegrees) {
 }
 
 
+
+  private void cancelMarkerAnimator(String driverId) {
+      if (markerAnimators.containsKey(driverId)) {
+          ValueAnimator animator = markerAnimators.get(driverId);
+          if (animator != null) {
+              animator.cancel();
+          }
+          markerAnimators.remove(driverId);
+      }
+  }
+
+  private com.google.android.gms.maps.model.BitmapDescriptor createMarkerIcon(
+          String markerType, String driverId, String vehicleVariant, double rotation, 
+          boolean isCluster, int clusterCount, int size, boolean rotationEnabled,
+          String title, List<String> leftlabelIcons, List<String> rightlabelIcons, 
+          org.json.JSONObject calloutConfig, boolean isUpdate) {
+    
+      com.google.android.gms.maps.model.BitmapDescriptor icon = null;
+      if ("3D".equals(markerType)) {
+          
+          if (isUpdate && nearbyMarker3DIconsCache.containsKey(driverId)) {
+              icon = nearbyMarker3DIconsCache.get(driverId);
+          } else {
+              icon = getIconFromAssets(vehicleVariant, rotation, isCluster, clusterCount, size, rotationEnabled);
+              nearbyMarker3DIconsCache.put(driverId, icon);
+          }
+          return icon;
+      } else {
+          if (isUpdate && nearbyMarker2DIconsCache.containsKey(driverId)) {
+              icon = nearbyMarker2DIconsCache.get(driverId);
+          } else {
+              Bitmap labelBitmap = createSimpleLabel(title, leftlabelIcons, rightlabelIcons, calloutConfig);
+              icon = com.google.android.gms.maps.model.BitmapDescriptorFactory.fromBitmap(labelBitmap);
+              nearbyMarker2DIconsCache.put(driverId, icon);
+          }
+          return icon;
+      }
+  }
 
   // Native nearby markers management
   public void updateNearbyMarkersFromProcessedData(org.json.JSONArray processedMarkers) {
@@ -2242,13 +2255,7 @@ private float getAdaptiveCalloutAnchorV(float rotationDegrees) {
               float calloutAnchorU = 0.5f;
 
               
-              if (markerAnimators.containsKey(driverId)) {
-                  ValueAnimator animator = markerAnimators.get(driverId);
-                  if (animator != null) {
-                      animator.cancel();
-                  }
-                  markerAnimators.remove(driverId);
-              }
+              cancelMarkerAnimator(driverId);
 
               seenDrivers.add(driverId);
 
@@ -2260,32 +2267,13 @@ private float getAdaptiveCalloutAnchorV(float rotationDegrees) {
                       if(existingCalloutMarker != null){
                          existingCalloutMarker.setVisible(isVisible && !hideCallout);
                         if(forceUpdate){
-                            if(markerType.equals("3D")){
-                                 
-                      com.google.android.gms.maps.model.BitmapDescriptor marker3DIcon = null;
-                      if(nearbyMarker3DIconsCache.containsKey(driverId)){
-                          marker3DIcon = nearbyMarker3DIconsCache.get(driverId);
-                      } else {
-                         marker3DIcon = getIconFromAssets(vehicleVariant, rotation, isCluster, clusterCount, size,rotationEnabled);
-                         nearbyMarker3DIconsCache.put(driverId, marker3DIcon);
-                      }
-                     
-                      existingMarker.setIcon(marker3DIcon);
-                  }
-                  else{
-                    com.google.android.gms.maps.model.BitmapDescriptor marker2DIcon = null;
-                      if(nearbyMarker2DIconsCache.containsKey(driverId)){
-                          marker2DIcon = nearbyMarker2DIconsCache.get(driverId);
-                      } else {
-                        Bitmap labelBitmap = createSimpleLabel(title, leftlabelIcons, rightlabelIcons, calloutConfig);
-                        marker2DIcon =  com.google.android.gms.maps.model.BitmapDescriptorFactory.fromBitmap(labelBitmap);
-                        nearbyMarker2DIconsCache.put(driverId, marker2DIcon);
-                      }
-                        existingMarker.setIcon(marker2DIcon);
-                        existingMarker.setRotation(0);
-                  
-                        }
-                     
+                            com.google.android.gms.maps.model.BitmapDescriptor icon = createMarkerIcon(
+                                    markerType, driverId, vehicleVariant, rotation, isCluster, clusterCount, size, rotationEnabled,
+                                    title, leftlabelIcons, rightlabelIcons, calloutConfig, false);
+                            existingMarker.setIcon(icon);
+                            if ("2D".equals(markerType)) {
+                                existingMarker.setRotation(0);
+                            }
                       }
                       }
 
@@ -2319,7 +2307,9 @@ private float getAdaptiveCalloutAnchorV(float rotationDegrees) {
                     }
                     existingMarker.setRotation((float) rotation);
                   } else {
-                    existingMarker.setIcon(getIconFromAssets(vehicleVariant, rotation, isCluster, clusterCount, size,rotationEnabled));
+                    existingMarker.setIcon(createMarkerIcon(
+                            markerType, driverId, vehicleVariant, rotation, isCluster, clusterCount, size, rotationEnabled,
+                            title, leftlabelIcons, rightlabelIcons, calloutConfig, false));
                   }
 
                   // Update existing marker
@@ -2356,17 +2346,10 @@ private float getAdaptiveCalloutAnchorV(float rotationDegrees) {
 
                 
                   // Use custom marker icon based on vehicle variant and rotation
-                  if(markerType.equals("3D")){
-                      com.google.android.gms.maps.model.BitmapDescriptor marker3DIcon = getIconFromAssets(vehicleVariant, rotation, isCluster, clusterCount, size,rotationEnabled);
-                      nearbyMarker3DIconsCache.put(driverId, marker3DIcon);
-                      markerOptions.icon(marker3DIcon);
-                  }
-                  else{
-                        Bitmap labelBitmap = createSimpleLabel(title, leftlabelIcons, rightlabelIcons, calloutConfig);
-                        com.google.android.gms.maps.model.BitmapDescriptor marker2DIcon =  com.google.android.gms.maps.model.BitmapDescriptorFactory.fromBitmap(labelBitmap);
-                        nearbyMarker2DIconsCache.put(driverId, marker2DIcon);
-                        markerOptions.icon(marker2DIcon);
-                  }
+                  com.google.android.gms.maps.model.BitmapDescriptor icon = createMarkerIcon(
+                          markerType, driverId, vehicleVariant, rotation, isCluster, clusterCount, size, rotationEnabled,
+                          title, leftlabelIcons, rightlabelIcons, calloutConfig, false);
+                  markerOptions.icon(icon);
 
                   Marker newMarker = markerCollection.addMarker(markerOptions);
                  if(rotationEnabled && rotation != -1) newMarker.setRotation((float) rotation);
@@ -2405,13 +2388,7 @@ private float getAdaptiveCalloutAnchorV(float rotationDegrees) {
               java.util.Map.Entry<String, Marker> entry = iterator.next();
               String driverId = entry.getKey();
               if (!seenDrivers.contains(driverId)) {
-                  if (markerAnimators.containsKey(driverId)) {
-                      ValueAnimator animator = markerAnimators.get(driverId);
-                      if (animator != null) {
-                          animator.cancel();
-                      }
-                      markerAnimators.remove(driverId);
-                  }
+                  cancelMarkerAnimator(driverId);
                   Marker marker = entry.getValue();
                   Marker calloutMarker = nearbyMarkersCalloutCache.get(driverId);
                   markerCollection.remove(marker);
