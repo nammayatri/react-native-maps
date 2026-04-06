@@ -2287,9 +2287,6 @@ private float getAdaptiveCalloutAnchorV(float rotationDegrees) {
                         }
                      
                       }
-                       else{
-                        existingCalloutMarker.setVisible(isVisible && !hideCallout);
-                       }
                       }
 
                       LatLng start = existingMarker.getPosition();
@@ -2306,7 +2303,7 @@ private float getAdaptiveCalloutAnchorV(float rotationDegrees) {
                           locEnd.setLatitude(end.latitude);
                           locEnd.setLongitude(end.longitude);
                           rotation = locStart.bearingTo(locEnd);
-                      } else if(forceUpdate == false) {
+                      } else if(!forceUpdate) {
                           rotation = existingMarker.getRotation();
                       }
                 }
@@ -2422,6 +2419,8 @@ private float getAdaptiveCalloutAnchorV(float rotationDegrees) {
                       markerCollection.remove(calloutMarker);
                   }
                   iterator.remove();
+                  nearbyMarker2DIconsCache.remove(driverId);
+                  nearbyMarker3DIconsCache.remove(driverId);
                   nearbyMarkersCalloutCache.remove(driverId);
               }
           }
