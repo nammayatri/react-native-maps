@@ -816,12 +816,16 @@ public static CameraPosition cameraPositionFromMap(ReadableMap camera){
       TileOverlay heatmap = (TileOverlay)heatmapView.getFeature();
       heatmapMap.put(heatmap, heatmapView);
     } else if (child instanceof ViewGroup) {
-      ViewGroup children = (ViewGroup) child;
-      for (int i = 0; i < children.getChildCount(); i++) {
-        addFeature(children.getChildAt(i), index);
-      }
+        ViewGroup children = (ViewGroup) child;
+        for (int i = children.getChildCount() - 1; i >= 0; i--) {
+            addFeature(children.getChildAt(i), index);
+        }
     } else {
-      addView(child, index);
+        ViewGroup childParent = (ViewGroup) child.getParent();
+        if (childParent != null) {
+            childParent.removeView(child);
+        }
+        addView(child, index);
     }
   }
 
