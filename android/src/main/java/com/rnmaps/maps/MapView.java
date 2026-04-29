@@ -1192,10 +1192,14 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
             heatmapMap.put(heatmap, heatmapView);
         } else if (child instanceof ViewGroup) {
             ViewGroup children = (ViewGroup) child;
-            for (int i = 0; i < children.getChildCount(); i++) {
+            for (int i = children.getChildCount() - 1; i >= 0; i--) {
                 addFeature(children.getChildAt(i), index);
             }
         } else {
+            ViewGroup childParent = (ViewGroup) child.getParent();
+            if (childParent != null) {
+                childParent.removeView(child);
+            }
             addView(child, index);
         }
     }
