@@ -648,6 +648,18 @@ using namespace facebook::react;
         }
     }
 
+    switch (newViewProps.paddingAdjustmentBehavior) {
+        case RNMapsGoogleMapViewPaddingAdjustmentBehavior::Never:
+            _view.paddingAdjustmentBehavior = kGMSMapViewPaddingAdjustmentBehaviorNever;
+            break;
+        case RNMapsGoogleMapViewPaddingAdjustmentBehavior::Automatic:
+            _view.paddingAdjustmentBehavior = kGMSMapViewPaddingAdjustmentBehaviorAutomatic;
+            break;
+        case RNMapsGoogleMapViewPaddingAdjustmentBehavior::Always:
+            _view.paddingAdjustmentBehavior = kGMSMapViewPaddingAdjustmentBehaviorAlways;
+            break;
+    }
+
     if (oldViewProps.userInterfaceStyle != newViewProps.userInterfaceStyle){
         switch (newViewProps.userInterfaceStyle) {
             case RNMapsGoogleMapViewUserInterfaceStyle::Light:
