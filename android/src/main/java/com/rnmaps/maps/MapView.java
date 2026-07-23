@@ -1280,7 +1280,9 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
     }
 
     public void updateExtraData(Object extraData) {
-        if (setPaddingDeferred && super.getHeight() > 0 && super.getWidth() > 0) {
+        // map stays null until onMapReady, which re-applies the deferred padding itself —
+        // so it is safe (and required, to avoid an NPE) to skip the restore here until then.
+        if (setPaddingDeferred && map != null && super.getHeight() > 0 && super.getWidth() > 0) {
             CameraUpdate cu = CameraUpdateFactory.newCameraPosition(map.getCameraPosition());
 
             map.setPadding(edgeLeftPadding + baseLeftMapPadding,

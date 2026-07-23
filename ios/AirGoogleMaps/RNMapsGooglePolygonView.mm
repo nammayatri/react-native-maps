@@ -59,6 +59,7 @@ bool areHolesEqual(const std::vector<std::vector<RNMapsGooglePolygonHolesStruct>
 
 @implementation RNMapsGooglePolygonView {
     AIRGMSPolygon *_view;
+    __weak AIRGoogleMap *_map;
 }
 
 
@@ -71,15 +72,38 @@ bool areHolesEqual(const std::vector<std::vector<RNMapsGooglePolygonHolesStruct>
   return concreteComponentDescriptorProvider<RNMapsGooglePolygonComponentDescriptor>();
 }
 
+// GMS crashes (CoordsToPoints derefs 0x0) if a polygon with a nil/degenerate path
+// is attached to the map. A valid polygon needs >= 3 finite coordinates.
+- (BOOL) hasValidPath
+{
+    GMSPath *path = _view.path;
+    if (!path || path.count < 3) {
+        return NO;
+    }
+    for (NSUInteger i = 0; i < path.count; i++) {
+        CLLocationCoordinate2D c = [path coordinateAtIndex:i];
+        if (!isfinite(c.latitude) || !isfinite(c.longitude)) {
+            return NO;
+        }
+    }
+    return YES;
+}
+
 - (void) didInsertInMap:(AIRGoogleMap*) map
 {
-    _view.map = map;
+    _map = map;
+    // Attach only when the path is safe; otherwise updateProps attaches once
+    // valid coordinates arrive (mount can precede coordinate props).
+    if ([self hasValidPath]) {
+        _view.map = map;
+    }
 }
 
 -(void) didRemoveFromMap
 {
     _view.map = nil;
     _view = nil;
+    _map = nil;
 }
 
 - (void) prepareContentView {
@@ -177,6 +201,16 @@ bool areHolesEqual(const std::vector<std::vector<RNMapsGooglePolygonHolesStruct>
           [path addCoordinate:coordinates];
         }
         _view.path = path;
+    }
+
+    // Re-evaluate attachment every update: late-attach once coordinates become
+    // valid (empty-at-mount), and detach if they ever become invalid.
+    if ([self hasValidPath]) {
+        if (_map && _view.map == nil) {
+            _view.map = _map;
+        }
+    } else if (_view.map != nil) {
+        _view.map = nil;
     }
 
     if (!areHolesEqual(newViewProps.holes, oldViewProps.holes)){

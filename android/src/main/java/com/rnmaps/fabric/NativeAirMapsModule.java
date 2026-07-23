@@ -56,13 +56,33 @@ public class NativeAirMapsModule extends NativeAirMapsModuleSpec {
         return NAME;
     }
 
+    // The MapView (and its GoogleMap, null until onMapReady) may not exist yet — or may already
+    // be unmounted — when JS calls in. resolveView throws for a dead tag, so resolve defensively
+    // and let callers reject the promise instead of crashing the UI thread.
+    @Nullable
+    private static MapView resolveMapView(@Nullable UIManager uiManager, int tag) {
+        if (uiManager == null) {
+            return null;
+        }
+        try {
+            View view = uiManager.resolveView(tag);
+            return view instanceof MapView ? (MapView) view : null;
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
     @Override
     public void getCamera(double tag, Promise promise) {
         UIManager uiManager = UIManagerHelper.getUIManagerForReactTag(getReactApplicationContext(), (int) tag);
         getReactApplicationContext().runOnUiQueueThread(new Runnable() {
             @Override
             public void run() {
-                MapView view = (MapView) uiManager.resolveView((int) tag);
+                MapView view = resolveMapView(uiManager, (int) tag);
+                if (view == null || view.map == null) {
+                    promise.reject("MAP_NOT_READY", "getCamera called before the map was ready");
+                    return;
+                }
                 CameraPosition position = view.map.getCameraPosition();
                 WritableMap map = Arguments.createMap();
                 WritableMap center = Arguments.createMap();
@@ -82,7 +102,11 @@ public class NativeAirMapsModule extends NativeAirMapsModuleSpec {
 
         UIManager uiManager = UIManagerHelper.getUIManagerForReactTag(getReactApplicationContext(), (int) tag);
         getReactApplicationContext().runOnUiQueueThread(() -> {
-            MapView view = (MapView) uiManager.resolveView((int) tag);
+            MapView view = resolveMapView(uiManager, (int) tag);
+            if (view == null || view.map == null) {
+                promise.reject("MAP_NOT_READY", "getMarkersFrames called before the map was ready");
+                return;
+            }
             double[][] boundaries = view.getMarkersFrames(onlyVisible);
             if (boundaries != null) {
                 WritableMap coordinates = new WritableNativeMap();
@@ -108,7 +132,11 @@ public class NativeAirMapsModule extends NativeAirMapsModuleSpec {
     public void getMapBoundaries(double tag, Promise promise) {
         UIManager uiManager = UIManagerHelper.getUIManagerForReactTag(getReactApplicationContext(), (int) tag);
         getReactApplicationContext().runOnUiQueueThread(() -> {
-            MapView view = (MapView) uiManager.resolveView((int) tag);
+            MapView view = resolveMapView(uiManager, (int) tag);
+            if (view == null || view.map == null) {
+                promise.reject("MAP_NOT_READY", "getMapBoundaries called before the map was ready");
+                return;
+            }
             double[][] boundaries = view.getMapBoundaries();
             WritableMap coordinates = new WritableNativeMap();
             WritableMap northEastHash = new WritableNativeMap();
@@ -152,7 +180,11 @@ public class NativeAirMapsModule extends NativeAirMapsModuleSpec {
                 getReactApplicationContext().runOnUiQueueThread(new Runnable() {
                     @Override
                     public void run() {
-                        MapView view = (MapView) uiManager.resolveView((int) tag);
+                        MapView view = resolveMapView(uiManager, (int) tag);
+                        if (view == null || view.map == null) {
+                            promise.reject("MAP_NOT_READY", "takeSnapshot called before the map was ready");
+                            return;
+                        }
                         view.map.snapshot(snapshot -> {
 
                             // Convert image to requested width/height if necessary
