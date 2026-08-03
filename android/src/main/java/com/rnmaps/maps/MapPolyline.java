@@ -158,6 +158,13 @@ public class MapPolyline extends MapFeature {
     }
 
     public void setStrokeColors(ReadableArray strokeColors) {
+        if (strokeColors == null || strokeColors.size() == 0) {
+            this.spans = new ArrayList<>();
+            if (polyline != null) {
+                polyline.setSpans(this.spans);
+            }
+            return;
+        }
         List<StyleSpan> spans = new ArrayList<>();
         for (int i = 0; i < strokeColors.size(); i++) {
             StrokeStyle stroke;
