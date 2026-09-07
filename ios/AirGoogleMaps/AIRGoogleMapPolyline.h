@@ -40,6 +40,9 @@
 -(void)startPolylineAnimation:(UIColor *)animateColor animationDuration:(CGFloat)animationDuration delay:(CGFloat)delay;
 -(void)stopPolylineAnimation;
 
+/// Re-derives the dash spans from `lineDashPattern` (in points) at the map's current zoom.
+-(void)refreshDashPatternForCamera;
+
 @end
 
 #endif

@@ -264,6 +264,7 @@ id regionAsJSON(MKCoordinateRegion region) {
     polyline.polyline.map = self;
     polyline.animatedPolyline.map = self;
     [self.polylines addObject:polyline];
+    [polyline refreshDashPatternForCamera];
   } else if ([subview isKindOfClass:[AIRGoogleMapCircle class]]) {
     AIRGoogleMapCircle *circle = (AIRGoogleMapCircle*)subview;
     circle.circle.map = self;
@@ -532,6 +533,7 @@ id regionAsJSON(MKCoordinateRegion region) {
 }
 
 - (void)didChangeCameraPosition:(GMSCameraPosition *)position isGesture:(BOOL)isGesture{
+    [self refreshDashedPolylines];
     id event = @{@"region": regionAsJSON([AIRGoogleMap makeGMSCameraPositionFromMap:self andGMSCameraPosition:position]),
                  @"isGesture": [NSNumber numberWithBool:isGesture],
     };
@@ -553,7 +555,14 @@ id regionAsJSON(MKCoordinateRegion region) {
   if (self.onPoiClick) self.onPoiClick(event);
 }
 
+- (void)refreshDashedPolylines {
+  for (AIRGoogleMapPolyline *polyline in self.polylines) {
+    [polyline refreshDashPatternForCamera];
+  }
+}
+
 - (void)idleAtCameraPosition:(GMSCameraPosition *)position  isGesture:(BOOL)isGesture{
+  [self refreshDashedPolylines];
   id event = @{@"region": regionAsJSON([AIRGoogleMap makeGMSCameraPositionFromMap:self andGMSCameraPosition:position]),
                               @"isGesture": [NSNumber numberWithBool:isGesture],
                               };

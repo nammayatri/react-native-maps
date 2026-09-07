@@ -55,6 +55,9 @@ export type MapPolylineProps = ViewProps & {
    * An array of numbers specifying the dash pattern to use for the path.
    * The array contains one or more numbers that indicate the lengths (measured in points)
    * of the line segments and gaps in the pattern.
+   * On Google Maps (iOS) the lengths are converted to path metres at the current zoom and kept
+   * up to date as the camera moves, so the pattern keeps its on-screen size; a segment shorter
+   * than the stroke width is drawn at the stroke width, as Android does for a round-capped dash.
    * The values in the array alternate, starting with the first line segment length,
    * followed by the first gap length, followed by the second line segment length, and so on.
    *
