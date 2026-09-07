@@ -13,7 +13,9 @@
 #import <GoogleMaps/GoogleMaps.h>
 #import <React/RCTUtils.h>
 
-@implementation AIRGoogleMapPolyline
+@implementation AIRGoogleMapPolyline {
+  double _spansZoom;
+}
 
 - (instancetype)init
 {
@@ -79,6 +81,7 @@
 {
   _strokeWidth = strokeWidth;
   _polyline.strokeWidth = strokeWidth;
+  [self configureStyleSpansIfNeeded];
 }
 
 - (void)setFillColor:(UIColor *)fillColor {
@@ -118,9 +121,44 @@
   _polyline.onPress = onPress;
 }
 
+// `lineDashPattern` is specified in points, as on Android and Apple Maps, but GMSStyleSpans
+// measures its lengths along the path in metres. The pattern is converted at the camera's current
+// zoom and re-derived whenever the camera moves (see AIRGoogleMap), so a dash keeps its on-screen
+// size instead of shrinking to nothing as the map zooms out. Returns nil until the polyline is on a
+// map, since the conversion needs the camera.
+- (NSArray<NSNumber *> *)dashLengthsInMeters {
+  GMSMapView *map = _polyline.map;
+  if (!map) {
+    return nil;
+  }
+  GMSCameraPosition *camera = map.camera;
+  double metersPerPoint = 156543.03392 * cos(camera.target.latitude * M_PI / 180.0) / pow(2.0, camera.zoom);
+  if (!(metersPerPoint > 0)) {
+    return nil;
+  }
+  NSMutableArray<NSNumber *> *lengths = [NSMutableArray arrayWithCapacity:_lineDashPattern.count];
+  for (NSUInteger i = 0; i < _lineDashPattern.count; i++) {
+    double points = MAX([_lineDashPattern[i] doubleValue], 0.0);
+    BOOL isDash = (i % 2 == 0);
+    // Android draws a round-capped dash as a dot of the stroke's width whatever length was asked
+    // for; a dash shorter than the stroke width is drawn the same way here.
+    if (isDash && points < _strokeWidth) {
+      points = _strokeWidth;
+    }
+    [lengths addObject:@(points * metersPerPoint)];
+  }
+  _spansZoom = camera.zoom;
+  return lengths;
+}
+
 - (void)configureStyleSpansIfNeeded {
-  if (!_strokeColor || !_lineDashPattern || !_polyline.path) {
+  if (!_strokeColor || !_lineDashPattern || _lineDashPattern.count == 0 || !_polyline.path) {
       return;
+  }
+
+  NSArray<NSNumber *> *lengths = [self dashLengthsInMeters];
+  if (!lengths) {
+    return;
   }
 
   BOOL isLine = YES;
@@ -134,7 +172,18 @@
     isLine = !isLine;
   }
 
-  _polyline.spans = GMSStyleSpans(_polyline.path, styles, _lineDashPattern, kGMSLengthRhumb);
+  _polyline.spans = GMSStyleSpans(_polyline.path, styles, lengths, kGMSLengthRhumb);
+}
+
+-(void)refreshDashPatternForCamera {
+  if (!_lineDashPattern || _lineDashPattern.count == 0) {
+    return;
+  }
+  GMSMapView *map = _polyline.map;
+  if (map && _polyline.spans.count > 0 && fabs(map.camera.zoom - _spansZoom) < 0.01) {
+    return;
+  }
+  [self configureStyleSpansIfNeeded];
 }
 
 -(void)startPolylineAnimation:(UIColor *)animateColor animationDuration:(CGFloat)animationDuration delay:(CGFloat)delay {
