@@ -23,7 +23,8 @@ import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeMap;
 import com.facebook.react.module.annotations.ReactModule;
-import com.facebook.react.uimanager.UIManagerModule;
+import com.facebook.react.bridge.UIManager;
+import com.facebook.react.uimanager.UIManagerHelper;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
@@ -317,9 +318,8 @@ public class MapModule extends ReactContextBaseJavaModule {
     new Handler(Looper.getMainLooper()).post(() -> {
         try {
             // Get the React Native view manager
-            UIManagerModule uiManager = getReactApplicationContext()
-                .getNativeModule(com.facebook.react.uimanager.UIManagerModule.class);
-            
+            UIManager uiManager = UIManagerHelper.getUIManagerForReactTag(context, nativeTag);
+
             if (uiManager != null) {
                 // Get the view from the ref
                 View view = uiManager.resolveView(nativeTag);
@@ -338,7 +338,7 @@ public class MapModule extends ReactContextBaseJavaModule {
                     promise.reject("NO_MAPVIEW_FOUND", "Could not find MapView for nativeTag: " + nativeTag);
                 }
             } else {
-                promise.reject("NO_UIMANAGER", "UIManagerModule not found");
+                promise.reject("NO_UIMANAGER", "UIManager not found");
             }
             
         } catch (Exception e) {

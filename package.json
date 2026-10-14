@@ -111,6 +111,14 @@
     "includesGeneratedCode": true,
     "android": {
       "javaPackageName": "com.rnmaps.fabric"
+    },
+    "ios": {
+      "componentProvider": {
+        "RNMapsGoogleMapView": "RNMapsGoogleMapView",
+        "RNMapsGooglePolygon": "RNMapsGooglePolygonView",
+        "RNMapsMapView": "RNMapsMapView",
+        "RNMapsMarker": "RNMapsMarkerView"
+      }
     }
   },
   "engines": {
