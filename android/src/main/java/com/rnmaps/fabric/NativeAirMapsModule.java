@@ -161,8 +161,12 @@ public class NativeAirMapsModule extends NativeAirMapsModuleSpec {
     @Override
     public void takeSnapshot(double tag, String config, Promise promise) {
         WritableMap options = null;
+        if (config == null) {
+            promise.reject("SNAPSHOT_CONFIG_ERROR", "takeSnapshot called without a config");
+            return;
+        }
         try {
-            if (config != null) {
+            {
                 JSONObject jsonObject = new JSONObject(config);
                 options = JSONUtil.convertJsonToWritable(jsonObject);
                 WritableMap finalOptions = options;
@@ -172,6 +176,10 @@ public class NativeAirMapsModule extends NativeAirMapsModuleSpec {
                 final Bitmap.CompressFormat compressFormat =
                         format.equals(SNAPSHOT_FORMAT_PNG) ? Bitmap.CompressFormat.PNG :
                                 format.equals(SNAPSHOT_FORMAT_JPG) ? Bitmap.CompressFormat.JPEG : null;
+                if (compressFormat == null) {
+                    promise.reject("SNAPSHOT_FORMAT_ERROR", "Unsupported snapshot format: " + format);
+                    return;
+                }
                 final double quality = finalOptions.hasKey("quality") ? finalOptions.getDouble("quality") : 1.0;
                 final DisplayMetrics displayMetrics = context.getResources().getDisplayMetrics();
                 final Integer width =
@@ -189,8 +197,11 @@ public class NativeAirMapsModule extends NativeAirMapsModuleSpec {
                             promise.reject("MAP_NOT_READY", "takeSnapshot called before the map was ready");
                             return;
                         }
+                        // GoogleMap.snapshot throws (e.g. IllegalStateException) while the app is
+                        // backgrounded or the map is tearing down; on the UI thread that is a crash.
+                        try {
                         view.map.snapshot(snapshot -> {
-
+                          try {
                             // Convert image to requested width/height if necessary
                             if (snapshot == null) {
                                 promise.reject("Failed to generate bitmap, snapshot = null");
@@ -223,8 +234,16 @@ public class NativeAirMapsModule extends NativeAirMapsModuleSpec {
                                 byte[] bytes = outputStream.toByteArray();
                                 String data = Base64.encodeToString(bytes, Base64.NO_WRAP);
                                 promise.resolve(data);
+                            } else {
+                                promise.reject("SNAPSHOT_RESULT_ERROR", "Unsupported snapshot result: " + result);
                             }
+                          } catch (Exception e) {
+                            promise.reject("SNAPSHOT_PROCESSING_ERROR", "Error processing snapshot: " + e.getMessage(), e);
+                          }
                         });
+                        } catch (Exception e) {
+                            promise.reject("SNAPSHOT_CALL_ERROR", "Error calling snapshot: " + e.getMessage(), e);
+                        }
                     }
                 });
             }
