@@ -1,5 +1,4 @@
-import type { HostComponent } from 'react-native';
-import codegenNativeCommands from 'react-native/Libraries/Utilities/codegenNativeCommands';
+import { codegenNativeCommands, type HostComponent } from 'react-native';
 import { type NativeProps } from './MapPolyline';
 
 export type MapPolylineNativeComponentType = HostComponent<NativeProps>;

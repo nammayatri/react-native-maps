@@ -154,7 +154,7 @@ export type MapPolylineProps = ViewProps & {
 };
 
 export type NativeProps = MapPolylineProps & {
-  ref: React.RefObject<MapPolylineNativeComponentType>;
+  ref: React.RefObject<MapPolylineNativeComponentType | null>;
 };
 
 export class MapPolyline extends React.Component<MapPolylineProps> {
