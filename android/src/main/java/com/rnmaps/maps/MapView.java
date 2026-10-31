@@ -133,7 +133,9 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
     private CameraUpdate cameraToSet;
     private boolean setPaddingDeferred = false;
     private boolean showUserLocation = false;
-    private boolean showMyLocationButton = true;
+    // Off unless asked for: Fabric never calls the setter for a prop JS leaves out, so the
+    // old-arch @ReactProp default (false) does not reach here.
+    private boolean showMyLocationButton = false;
 
     private boolean showsTraffic = false;
 
@@ -499,6 +501,13 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
     public void onMapReady(@NonNull final GoogleMap map) {
         if (destroyed) {
             return;
+        }
+        if (this.map != null) {
+            // Re-attach after a detach (onAttachedToWindow's restore path) hands us a new
+            // GoogleMap and collections below. Native nearby markers cached against the old
+            // map would otherwise be "found" and moved instead of re-created, leaving them
+            // missing or unclickable; drop them so the next updateNearbyMarkersNative rebuilds.
+            resetNearbyMarkers();
         }
         this.map = map;
         if (mapType != null) {
@@ -2355,6 +2364,20 @@ private float getAdaptiveCalloutAnchorV(float rotationDegrees) {
           }
           markerAnimators.remove(driverId);
       }
+  }
+
+  // The cached Markers belong to the GoogleMap they were added to; once that map is replaced
+  // they are dead handles. Cancelling first stops animators from writing to them.
+  private void resetNearbyMarkers() {
+      // Copy first: cancel() runs each animator's end listener, which removes it from the map.
+      for (ValueAnimator animator : new java.util.ArrayList<>(markerAnimators.values())) {
+          if (animator != null) {
+              animator.cancel();
+          }
+      }
+      markerAnimators.clear();
+      nearbyMarkersCache.clear();
+      nearbyMarkersCalloutCache.clear();
   }
 
   private com.google.android.gms.maps.model.BitmapDescriptor createMarkerIcon(

@@ -826,8 +826,15 @@ class MapView extends React.Component<MapViewProps, State> {
     this.map.current?.setNativeProps(props);
   }
 
+  componentWillUnmount() {
+    clearTimeout(this.mapReadytimerId);
+  }
+
   private _onMapReady() {
+    // Android re-dispatches the native ready event when a detached map re-attaches;
+    // the app's onMapReady must still run only once.
     if (this.callMapReady) {
+      this.callMapReady = false;
       clearTimeout(this.mapReadytimerId);
       const { onMapReady } = this.props;
       this.setState({ isReady: true }, () => {
