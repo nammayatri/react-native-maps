@@ -74,6 +74,6 @@ public interface RNMapsMapViewManagerInterface<T extends View> extends ViewManag
   void animateCamera(T view, String cameraJSON, int duration);
   void fitToElements(T view, String edgePaddingJSON, boolean animated);
   void fitToSuppliedMarkers(T view, String markersJSON, String edgePaddingJSON, boolean animated);
-  void fitToCoordinates(T view, String coordinatesJSON, String edgePaddingJSON, boolean animated);
+  void fitToCoordinates(T view, String coordinatesJSON, String edgePaddingJSON, boolean animated, int duration);
   void setIndoorActiveLevelIndex(T view, int activeLevelIndex);
 }

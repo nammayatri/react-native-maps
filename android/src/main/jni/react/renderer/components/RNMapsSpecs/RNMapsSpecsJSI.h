@@ -169,6 +169,7 @@ protected:
     methodMap_["getAddressFromCoordinates"] = MethodMetadata {.argCount = 2, .invoker = __getAddressFromCoordinates};
     methodMap_["getPointForCoordinate"] = MethodMetadata {.argCount = 2, .invoker = __getPointForCoordinate};
     methodMap_["getCoordinateForPoint"] = MethodMetadata {.argCount = 2, .invoker = __getCoordinateForPoint};
+    methodMap_["updateNearbyMarkersNative"] = MethodMetadata {.argCount = 2, .invoker = __updateNearbyMarkersNative};
   }
   
 private:
@@ -231,6 +232,15 @@ private:
     return bridging::callFromJs<jsi::Value>(rt, &T::getCoordinateForPoint,  static_cast<NativeAirMapsModuleCxxSpec*>(&turboModule)->jsInvoker_, static_cast<T*>(&turboModule),
       count <= 0 ? throw jsi::JSError(rt, "Expected argument in position 0 to be passed") : args[0].asNumber(),
       count <= 1 ? throw jsi::JSError(rt, "Expected argument in position 1 to be passed") : args[1].asObject(rt));
+  }
+
+  static jsi::Value __updateNearbyMarkersNative(jsi::Runtime &rt, TurboModule &turboModule, const jsi::Value* args, size_t count) {
+    static_assert(
+      bridging::getParameterCount(&T::updateNearbyMarkersNative) == 3,
+      "Expected updateNearbyMarkersNative(...) to have 3 parameters");
+    return bridging::callFromJs<jsi::Value>(rt, &T::updateNearbyMarkersNative,  static_cast<NativeAirMapsModuleCxxSpec*>(&turboModule)->jsInvoker_, static_cast<T*>(&turboModule),
+      count <= 0 ? throw jsi::JSError(rt, "Expected argument in position 0 to be passed") : args[0].asNumber(),
+      count <= 1 ? throw jsi::JSError(rt, "Expected argument in position 1 to be passed") : args[1].asString(rt));
   }
 };
 
