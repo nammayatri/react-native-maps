@@ -639,6 +639,7 @@ declare class MapView extends React.Component<MapViewProps, State> {
     private mapReadytimerId;
     constructor(props: MapViewProps);
     setNativeProps(props: Partial<NativeProps>): void;
+    componentWillUnmount(): void;
     private _onMapReady;
     getCamera(): Promise<Camera>;
     setCamera(camera: Partial<Camera>): void;
