@@ -315,6 +315,11 @@ export declare class MapMarker extends React.Component<MapMarkerProps> {
     setCoordinates(coordinate: LatLng): void;
     redrawCallout(): void;
     animateMarkerToCoordinate(coordinate: LatLng, duration?: number): void;
+    /**
+     * Android: moves along `path` at constant speed over `duration` ms on the UI thread, cancelling a
+     * path move still running. Elsewhere: animates straight to the last point.
+     */
+    animateMarkerAlongPath(path: LatLng[], duration?: number): void;
     redraw(): void;
     render(): React.JSX.Element;
 }

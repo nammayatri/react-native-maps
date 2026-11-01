@@ -1,5 +1,7 @@
 package com.rnmaps.maps;
 
+import java.util.List;
+import java.util.ArrayList;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -14,6 +16,8 @@ import android.widget.LinearLayout;
 import android.animation.ObjectAnimator;
 import android.util.Property;
 import android.animation.TypeEvaluator;
+import android.animation.ValueAnimator;
+import android.view.animation.LinearInterpolator;
 
 import android.os.Handler;
 import android.os.Looper;
@@ -203,6 +207,7 @@ public class MapMarker extends MapFeature {
     }
 
     public void setCoordinate(LatLng position) {
+        cancelPathAnimation();
         this.position = position;
         if (marker != null) {
             marker.setPosition(position);
@@ -372,10 +377,88 @@ public class MapMarker extends MapFeature {
         return new LatLng(lat, lng);
     }
 
+    private ValueAnimator pathAnimator;
+
+    private void cancelPathAnimation() {
+        if (pathAnimator != null) {
+            pathAnimator.cancel();
+            pathAnimator = null;
+        }
+    }
+
+    /** "lat,lng;lat,lng;…" → points; malformed pairs are skipped. */
+    public static List<LatLng> parsePath(String encoded) {
+        List<LatLng> points = new ArrayList<>();
+        if (encoded == null || encoded.isEmpty()) {
+            return points;
+        }
+        for (String pair : encoded.split(";")) {
+            String[] parts = pair.split(",");
+            if (parts.length != 2) {
+                continue;
+            }
+            try {
+                points.add(new LatLng(Double.parseDouble(parts[0]), Double.parseDouble(parts[1])));
+            } catch (NumberFormatException ignored) {
+                // skip
+            }
+        }
+        return points;
+    }
+
+    private static double approxDistance(LatLng a, LatLng b) {
+        double x = (b.longitude - a.longitude) * Math.cos(Math.toRadians((a.latitude + b.latitude) / 2));
+        double y = b.latitude - a.latitude;
+        return Math.sqrt(x * x + y * y);
+    }
+
+    /**
+     * Moves the marker along `path` at constant speed over `duration` ms, on the UI thread. A new path
+     * move, `animateToCoodinate` or a coordinate update cancels it.
+     */
+    public void animateAlongPath(List<LatLng> path, int duration) {
+        cancelPathAnimation();
+        if (marker == null || path == null || path.isEmpty()) {
+            return;
+        }
+        final int n = path.size();
+        final double[] cumulative = new double[n];
+        for (int i = 1; i < n; i++) {
+            cumulative[i] = cumulative[i - 1] + approxDistance(path.get(i - 1), path.get(i));
+        }
+        final double total = cumulative[n - 1];
+        final LatLng last = path.get(n - 1);
+        if (n == 1 || total == 0 || duration <= 0) {
+            marker.setPosition(last);
+            return;
+        }
+        final List<LatLng> points = new ArrayList<>(path);
+        final int[] segment = {0};
+        ValueAnimator animator = ValueAnimator.ofFloat(0f, 1f);
+        animator.setDuration(duration);
+        animator.setInterpolator(new LinearInterpolator());
+        animator.addUpdateListener(animation -> {
+            if (marker == null) {
+                return;
+            }
+            double target = total * animation.getAnimatedFraction();
+            while (segment[0] < n - 2 && cumulative[segment[0] + 1] < target) {
+                segment[0]++;
+            }
+            int i = segment[0];
+            double length = cumulative[i + 1] - cumulative[i];
+            float fraction = length == 0 ? 1f : (float) ((target - cumulative[i]) / length);
+            marker.setPosition(interpolate(Math.max(0f, Math.min(1f, fraction)), points.get(i), points.get(i + 1)));
+        });
+        pathAnimator = animator;
+        animator.start();
+    }
+
     public void animateToCoodinate(LatLng finalPosition, Integer duration) {
         if (marker == null || finalPosition == null) {
             return;
         }
+        cancelPathAnimation();
         TypeEvaluator<LatLng> typeEvaluator = new TypeEvaluator<LatLng>() {
             @Override
             public LatLng evaluate(float fraction, LatLng startValue, LatLng endValue) {

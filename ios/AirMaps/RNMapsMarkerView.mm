@@ -88,6 +88,16 @@ using namespace facebook::react;
     // do nothing
 }
 
+- (void) animateAlongPath:(NSString *)path duration:(NSInteger)duration
+{
+    // Apple Maps: no path animation; jump to the end of the path.
+    NSString *last = [[path componentsSeparatedByString:@";"] lastObject];
+    NSArray<NSString *> *parts = [last componentsSeparatedByString:@","];
+    if (parts.count == 2) {
+        [_view setCoordinate:CLLocationCoordinate2DMake([parts[0] doubleValue], [parts[1] doubleValue])];
+    }
+}
+
 - (void) setCoordinates:(double)latitude longitude:(double)longitude
 {
     [_view setCoordinate:CLLocationCoordinate2DMake(latitude, longitude)];

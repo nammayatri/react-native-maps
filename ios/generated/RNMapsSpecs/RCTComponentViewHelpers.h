@@ -611,6 +611,7 @@ if ([commandName isEqualToString:@"setIndoorActiveLevelIndex"]) {
 - (void)hideCallout;
 - (void)redrawCallout;
 - (void)redraw;
+- (void)animateAlongPath:(NSString *)path duration:(NSInteger)duration;
 @end
 
 RCT_EXTERN inline void RCTRNMapsMarkerHandleCommand(
@@ -735,6 +736,34 @@ if ([commandName isEqualToString:@"redraw"]) {
   
 
   [componentView redraw];
+  return;
+}
+
+if ([commandName isEqualToString:@"animateAlongPath"]) {
+#if RCT_DEBUG
+  if ([args count] != 2) {
+    RCTLogError(@"%@ command %@ received %d arguments, expected %d.", @"RNMapsMarker", commandName, (int)[args count], 2);
+    return;
+  }
+#endif
+
+  NSObject *arg0 = args[0];
+#if RCT_DEBUG
+  if (!RCTValidateTypeOfViewCommandArgument(arg0, [NSString class], @"string", @"RNMapsMarker", commandName, @"1st")) {
+    return;
+  }
+#endif
+  NSString * path = (NSString *)arg0;
+
+NSObject *arg1 = args[1];
+#if RCT_DEBUG
+  if (!RCTValidateTypeOfViewCommandArgument(arg1, [NSNumber class], @"number", @"RNMapsMarker", commandName, @"2nd")) {
+    return;
+  }
+#endif
+  NSInteger duration = [(NSNumber *)arg1 intValue];
+
+  [componentView animateAlongPath:path duration:duration];
   return;
 }
 

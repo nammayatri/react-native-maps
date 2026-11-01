@@ -339,12 +339,19 @@ export interface NativeCommands {
   hideCallout: (viewRef: React.ElementRef<React.ComponentType>) => void;
   redrawCallout: (viewRef: React.ElementRef<React.ComponentType>) => void;
   redraw: (viewRef: React.ElementRef<React.ComponentType>) => void;
+  /** `path` is "lat,lng;lat,lng;…". Linear in distance; cancels a path move still running. */
+  animateAlongPath: (
+    viewRef: React.ElementRef<React.ComponentType>,
+    path: string,
+    duration: Int32,
+  ) => void;
 }
 
 export const Commands: NativeCommands = codegenNativeCommands<NativeCommands>({
   supportedCommands: [
     'setCoordinates',
     'animateToCoordinates',
+    'animateAlongPath',
     'showCallout',
     'hideCallout',
     'redrawCallout',

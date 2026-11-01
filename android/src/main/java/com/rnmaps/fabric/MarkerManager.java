@@ -254,6 +254,11 @@ public class MarkerManager extends ViewGroupManager<MapMarker> implements RNMaps
     }
 
     @Override
+    public void animateAlongPath(MapMarker view, String path, int duration) {
+        view.animateAlongPath(MapMarker.parsePath(path), duration);
+    }
+
+    @Override
     public void setCoordinates(MapMarker view, double latitude, double longitude) {
         view.setCoordinate(new LatLng(latitude, longitude));
         view.setUpdated(true);

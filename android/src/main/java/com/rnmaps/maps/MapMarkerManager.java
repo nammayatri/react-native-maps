@@ -323,6 +323,13 @@ public class MapMarkerManager extends ViewGroupManager<MapMarker> {
             case "redraw":
                 view.updateMarkerIcon();
                 break;
+
+            case "animateAlongPath":
+                if (args == null) {
+                    break;
+                }
+                view.animateAlongPath(MapMarker.parsePath(args.getString(0)), args.getInt(1));
+                break;
         }
     }
 

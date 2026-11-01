@@ -392,6 +392,7 @@ export class MapMarker extends React.Component<MapMarkerProps> {
     this.setCoordinates = this.setCoordinates.bind(this);
     this.redrawCallout = this.redrawCallout.bind(this);
     this.animateMarkerToCoordinate = this.animateMarkerToCoordinate.bind(this);
+    this.animateMarkerAlongPath = this.animateMarkerAlongPath.bind(this);
   }
 
   setNativeProps(props: Partial<NativeProps>) {
@@ -464,6 +465,27 @@ export class MapMarker extends React.Component<MapMarkerProps> {
           duration,
         );
       }
+    }
+  }
+
+  /**
+   * Android: moves along `path` at constant speed over `duration` ms on the UI thread, cancelling a
+   * path move still running. Elsewhere: animates straight to the last point.
+   */
+  animateMarkerAlongPath(path: LatLng[], duration: number = 500) {
+    const last = path[path.length - 1];
+    if (!this.marker.current || !last) {
+      return;
+    }
+    if (this.fabricMarker && Platform.OS === 'android') {
+      FabricCommands.animateAlongPath(
+        // @ts-ignore
+        this.marker.current,
+        path.map(p => `${p.latitude},${p.longitude}`).join(';'),
+        duration,
+      );
+    } else {
+      this.animateMarkerToCoordinate(last, duration);
     }
   }
 
