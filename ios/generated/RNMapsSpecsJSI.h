@@ -170,6 +170,7 @@ protected:
     methodMap_["getPointForCoordinate"] = MethodMetadata {.argCount = 2, .invoker = __getPointForCoordinate};
     methodMap_["getCoordinateForPoint"] = MethodMetadata {.argCount = 2, .invoker = __getCoordinateForPoint};
     methodMap_["updateNearbyMarkersNative"] = MethodMetadata {.argCount = 2, .invoker = __updateNearbyMarkersNative};
+    methodMap_["supportsPathAnimation"] = MethodMetadata {.argCount = 0, .invoker = __supportsPathAnimation};
   }
   
 private:
@@ -241,6 +242,13 @@ private:
     return bridging::callFromJs<jsi::Value>(rt, &T::updateNearbyMarkersNative,  static_cast<NativeAirMapsModuleCxxSpec*>(&turboModule)->jsInvoker_, static_cast<T*>(&turboModule),
       count <= 0 ? throw jsi::JSError(rt, "Expected argument in position 0 to be passed") : args[0].asNumber(),
       count <= 1 ? throw jsi::JSError(rt, "Expected argument in position 1 to be passed") : args[1].asString(rt));
+  }
+
+  static jsi::Value __supportsPathAnimation(jsi::Runtime &rt, TurboModule &turboModule, const jsi::Value* /*args*/, size_t /*count*/) {
+    static_assert(
+      bridging::getParameterCount(&T::supportsPathAnimation) == 1,
+      "Expected supportsPathAnimation(...) to have 1 parameters");
+    return bridging::callFromJs<bool>(rt, &T::supportsPathAnimation,  static_cast<NativeAirMapsModuleCxxSpec*>(&turboModule)->jsInvoker_, static_cast<T*>(&turboModule));
   }
 };
 

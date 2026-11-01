@@ -56,6 +56,11 @@ public class NativeAirMapsModule extends NativeAirMapsModuleSpec {
         return NAME;
     }
 
+    @Override
+    public boolean supportsPathAnimation() {
+        return true;
+    }
+
     // The MapView (and its GoogleMap, null until onMapReady) may not exist yet — or may already
     // be unmounted — when JS calls in. resolveView throws for a dead tag, so resolve defensively
     // and let callers reject the promise instead of crashing the UI thread.

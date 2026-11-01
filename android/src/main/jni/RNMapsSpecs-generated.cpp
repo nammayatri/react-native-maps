@@ -52,6 +52,11 @@ static facebook::jsi::Value __hostFunction_NativeAirMapsModuleSpecJSI_updateNear
   return static_cast<JavaTurboModule &>(turboModule).invokeJavaMethod(rt, PromiseKind, "updateNearbyMarkersNative", "(DLjava/lang/String;Lcom/facebook/react/bridge/Promise;)V", args, count, cachedMethodId);
 }
 
+static facebook::jsi::Value __hostFunction_NativeAirMapsModuleSpecJSI_supportsPathAnimation(facebook::jsi::Runtime& rt, TurboModule &turboModule, const facebook::jsi::Value* args, size_t count) {
+  static jmethodID cachedMethodId = nullptr;
+  return static_cast<JavaTurboModule &>(turboModule).invokeJavaMethod(rt, BooleanKind, "supportsPathAnimation", "()Z", args, count, cachedMethodId);
+}
+
 NativeAirMapsModuleSpecJSI::NativeAirMapsModuleSpecJSI(const JavaTurboModule::InitParams &params)
   : JavaTurboModule(params) {
   methodMap_["getCamera"] = MethodMetadata {1, __hostFunction_NativeAirMapsModuleSpecJSI_getCamera};
@@ -62,6 +67,7 @@ NativeAirMapsModuleSpecJSI::NativeAirMapsModuleSpecJSI(const JavaTurboModule::In
   methodMap_["getPointForCoordinate"] = MethodMetadata {2, __hostFunction_NativeAirMapsModuleSpecJSI_getPointForCoordinate};
   methodMap_["getCoordinateForPoint"] = MethodMetadata {2, __hostFunction_NativeAirMapsModuleSpecJSI_getCoordinateForPoint};
   methodMap_["updateNearbyMarkersNative"] = MethodMetadata {2, __hostFunction_NativeAirMapsModuleSpecJSI_updateNearbyMarkersNative};
+  methodMap_["supportsPathAnimation"] = MethodMetadata {0, __hostFunction_NativeAirMapsModuleSpecJSI_supportsPathAnimation};
 }
 
 std::shared_ptr<TurboModule> RNMapsSpecs_ModuleProvider(const std::string &moduleName, const JavaTurboModule::InitParams &params) {

@@ -69,6 +69,10 @@ namespace facebook::react {
       return static_cast<ObjCTurboModule&>(turboModule).invokeObjCMethod(rt, PromiseKind, "updateNearbyMarkersNative", @selector(updateNearbyMarkersNative:markersJson:resolve:reject:), args, count);
     }
 
+    static facebook::jsi::Value __hostFunction_NativeAirMapsModuleSpecJSI_supportsPathAnimation(facebook::jsi::Runtime& rt, TurboModule &turboModule, const facebook::jsi::Value* args, size_t count) {
+      return static_cast<ObjCTurboModule&>(turboModule).invokeObjCMethod(rt, BooleanKind, "supportsPathAnimation", @selector(supportsPathAnimation), args, count);
+    }
+
   NativeAirMapsModuleSpecJSI::NativeAirMapsModuleSpecJSI(const ObjCTurboModule::InitParams &params)
     : ObjCTurboModule(params) {
       
@@ -94,6 +98,9 @@ namespace facebook::react {
         setMethodArgConversionSelector(@"getCoordinateForPoint", 1, @"JS_NativeAirMapsModule_Point:");
         
         methodMap_["updateNearbyMarkersNative"] = MethodMetadata {2, __hostFunction_NativeAirMapsModuleSpecJSI_updateNearbyMarkersNative};
+        
+        
+        methodMap_["supportsPathAnimation"] = MethodMetadata {0, __hostFunction_NativeAirMapsModuleSpecJSI_supportsPathAnimation};
         
   }
 } // namespace facebook::react

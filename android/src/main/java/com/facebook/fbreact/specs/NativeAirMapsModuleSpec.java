@@ -64,4 +64,8 @@ public abstract class NativeAirMapsModuleSpec extends ReactContextBaseJavaModule
   @ReactMethod
   @DoNotStrip
   public abstract void updateNearbyMarkersNative(double tag, String markersJson, Promise promise);
+
+  @ReactMethod(isBlockingSynchronousMethod = true)
+  @DoNotStrip
+  public abstract boolean supportsPathAnimation();
 }

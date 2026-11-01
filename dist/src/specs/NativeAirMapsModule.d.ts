@@ -27,6 +27,8 @@ export interface Spec extends TurboModule {
     getPointForCoordinate(tag: Double, coordinate: LatLng): Promise<Point>;
     getCoordinateForPoint(tag: Double, point: Point): Promise<LatLng>;
     updateNearbyMarkersNative(tag: Double, markersJson: string): Promise<void>;
+    /** True when markers support animateAlongPath (fork v1.29.11-ny.2+). Older binaries lack this method. */
+    supportsPathAnimation(): boolean;
 }
 declare const _default: Spec;
 export default _default;

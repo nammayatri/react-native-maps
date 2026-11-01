@@ -96,6 +96,7 @@ namespace JS {
                       markersJson:(NSString *)markersJson
                           resolve:(RCTPromiseResolveBlock)resolve
                            reject:(RCTPromiseRejectBlock)reject;
+- (NSNumber *)supportsPathAnimation;
 
 @end
 

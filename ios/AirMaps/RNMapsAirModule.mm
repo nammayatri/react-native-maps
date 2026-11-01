@@ -29,6 +29,12 @@
 
 @implementation RNMapsAirModule
 
+- (NSNumber *)supportsPathAnimation
+{
+    // iOS markers animate in JS (Reanimated); the native marker never needs the path command.
+    return @YES;
+}
+
 @synthesize viewRegistry_DEPRECATED = _viewRegistry_DEPRECATED;
 
 - (void)executeWithMapView:(double)tag
