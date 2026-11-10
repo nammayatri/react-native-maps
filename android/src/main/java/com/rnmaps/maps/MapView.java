@@ -170,6 +170,11 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
     private final GestureDetector gestureDetector;
     private boolean paused = false;
     private boolean destroyed = false;
+    // True once Google's MapView has received onCreate. Its DeferredLifecycleHelper only
+    // allocates its pending-ops list in onCreate/onStart/onResume, so onPause/onStop/onDestroy
+    // on a never-created map throw an NPE (seen on Android 17 when a map detaches before
+    // the activity lifecycle observer ever delivered ON_CREATE).
+    private boolean mapLifecycleCreated = false;
     private final ThemedReactContext context;
     private final FusedLocationSource fusedLocationSource;
 
@@ -229,6 +234,7 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
     @Override
     public void onCreate(LifecycleOwner owner) {
         super.onCreate(null);
+        mapLifecycleCreated = true;
     }
 
     @Override
@@ -259,8 +265,10 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
         }
         synchronized (MapView.this) {
             if (!paused) {
-                super.onPause();
-                MapView.this.onPause();
+                if (mapLifecycleCreated) {
+                    super.onPause();
+                    MapView.this.onPause();
+                }
                 paused = true;
             }
         }
@@ -273,7 +281,9 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
 
     @Override
     public void onStop(LifecycleOwner owner) {
-        super.onStop();
+        if (mapLifecycleCreated) {
+            super.onStop();
+        }
     }
 
     @Override
@@ -356,6 +366,7 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
         attachLifecycleObserver();
         if (savedMapState != null) {
             super.onCreate(savedMapState);
+            mapLifecycleCreated = true;
             super.onStart();
             super.onResume();
             prepareAttacherView();
@@ -403,7 +414,9 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
 
         // These operations don't need synchronization
         try {
-            onStop();
+            if (mapLifecycleCreated) {
+                onStop();
+            }
         } catch (Exception e) {
             Log.e("MapView", "Error during stop in onDetachedFromWindow: " + e.getMessage());
         }
@@ -889,7 +902,10 @@ public class MapView extends com.google.android.gms.maps.MapView implements Goog
             if (!paused) {
                 pauseSafely();
             }
-            onDestroy();
+            if (mapLifecycleCreated) {
+                // An NPE here used to skip detachLifecycleObserver() and leak the observer.
+                onDestroy();
+            }
             detachLifecycleObserver();
         } catch (Exception exception){
             Log.e("MapView", "exception with destroying", exception);
